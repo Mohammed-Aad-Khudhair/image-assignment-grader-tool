@@ -2,9 +2,9 @@ ProjectGrader — User Manual (GUI-first)
 1) The Interface (GUI / UI)
 Top toolbar
 •	Load Expected Image
-Pick the teacher’s reference image for Single Evaluation (shown on the left preview).
+Pick the teacher’s reference image for Single Evaluation (shown in the left preview).
 •	Load Student Image
-Pick one student image for Single Evaluation (shown on the right preview).
+Pick one student image for Single Evaluation (shown in the right preview).
 •	Select Expected Dir
 Choose the folder that contains expected images (used for context/mapping and batch workflows).
 •	Select Student Dir
@@ -139,11 +139,6 @@ o	Notes (optional):
 • logic=any (default): a pixel counts different if any channel > τ.
 • logic=all: counts different only if all channels > τ (stricter).
 • gray=1: compare in grayscale (ignore color).
-
-
-
-
-
 ________________________________________
 4) Aggregation (for per-pixel maps)
 Used when a metric gives a value per pixel (ΔE, |A−B|). It reduces many values to one.
@@ -176,9 +171,6 @@ Special (N_DIFF_PIXELS):
 thr:10 | 3000,8000,12000
 •	thr:10 → per-pixel sensitivity.
 •	counts after | → scoring bands (fewer is better).
-
-
-
 ________________________________________
 6) Scoring modes — bucket vs continuous
 •	bucket (step bands)
@@ -206,11 +198,8 @@ ________________________________________
 • No to load a binary mask image (white=included).
 •	Only masked pixels contribute to metrics.
 •	The mask is resized to the expected image automatically.
-Why it matters: focus grading on the important region; ignore background/borders.
-
-
-
-________________________________________
+Why it matters: focus grading on the important region; ignore background/borders
+________________________________________________________
 9) Glossary (abbreviations)
 •	GUI / UI — Graphical User Interface.
 •	JSON — JavaScript Object Notation (text format for rule sets).
