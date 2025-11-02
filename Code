@@ -1,4 +1,4 @@
-# Final-code.
+
 import sys, os, csv, json, math, re, tempfile
 import numpy as np
 import cv2
@@ -95,24 +95,21 @@ def metric_exact(a,b):
     a,b = _ensure_same_size(a,b)
     return 1.0 if np.array_equal(a,b) else 0.0
 
-# NEW: number of different pixels above a threshold
-def metric_n_diff_pixels(a, b, thr=10, logic='any', use_gray=False):
-    """Count pixels whose difference exceeds a threshold."""
+def metric_n_diff_pixels(a, b, thr=1, logic='any', use_gray=False):
     a, b = _ensure_same_size(a, b)
     if use_gray:
         ga = cv2.cvtColor(a, cv2.COLOR_BGR2GRAY).astype(np.float32)
         gb = cv2.cvtColor(b, cv2.COLOR_BGR2GRAY).astype(np.float32)
         diff = np.abs(ga - gb)
-        return float((diff > thr).sum())
+        return float((diff >= thr).sum())
     else:
         ad = np.abs(a.astype(np.float32) - b.astype(np.float32))
         if logic == 'all':
-            mask = (ad[:,:,0] > thr) & (ad[:,:,1] > thr) & (ad[:,:,2] > thr)
+            mask = (ad[:,:,0] >= thr) & (ad[:,:,1] >= thr) & (ad[:,:,2] >= thr)
         else:
-            mask = (ad[:,:,0] > thr) | (ad[:,:,1] > thr) | (ad[:,:,2] > thr)
+            mask = (ad[:,:,0] >= thr) | (ad[:,:,1] >= thr) | (ad[:,:,2] >= thr)
         return float(mask.sum())
 
-# NEW: stricter contour hierarchy similarity (0..1)
 def _holes_signature(gray):
     _, th = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
     cnts, hier = cv2.findContours(th, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -120,14 +117,13 @@ def _holes_signature(gray):
     hier = hier[0]
     holes_per_outer = []
     for idx, h in enumerate(hier):
-        if h[3] == -1:  # outer contour
+        if h[3] == -1:
             c = sum(1 for j, hh in enumerate(hier) if hh[3] == idx)
             holes_per_outer.append(c)
     holes_per_outer.sort()
     return holes_per_outer
 
 def metric_contours_strict(a, b):
-    """Return IoU-like similarity (0..1) of the histogram of 'holes per outer contour'."""
     a_gray = cv2.cvtColor(a, cv2.COLOR_BGR2GRAY)
     b_gray = cv2.cvtColor(b, cv2.COLOR_BGR2GRAY)
     sigA = _holes_signature(a_gray)
@@ -140,7 +136,11 @@ def metric_contours_strict(a, b):
     if union == 0: return 0.0
     return float(inter/union)
 
-# --------- helpers for N_DIFF_PIXELS ---------
+def metric_size_match(a, b, expect_w=None, expect_h=None):
+    if expect_w is not None and expect_h is not None:
+        return 1.0 if (b.shape[1] == expect_w and b.shape[0] == expect_h) else 0.0
+    return 1.0 if (b.shape[1] == a.shape[1] and b.shape[0] == a.shape[0]) else 0.0
+
 def parse_ndiff_params(tol_str, notes):
     thr = 10
     logic = 'any'
@@ -167,7 +167,6 @@ def parse_ndiff_params(tol_str, notes):
 
     return thr, logic, use_gray, tol_clean
 
-# ---------- console helpers ----------
 def read_console_text(student_dir, rule_notes):
     fname = "stdout.txt"
     if isinstance(rule_notes,str):
@@ -190,12 +189,16 @@ def console_compare(text, expected_text, mode="exact"):
     return 0.0
 
 def parse_notes_kv(notes):
-    """Parse key=value pairs in Notes (comma/semicolon separated)."""
     out={}
     if not isinstance(notes,str): return out
     for m in re.finditer(r"(\w+)\s*=\s*([^,;]+)", notes):
         out[m.group(1).lower()] = m.group(2).strip()
     return out
+
+def metric_size(a, b):
+    ha, wa = a.shape[:2]
+    hb, wb = b.shape[:2]
+    return float(max(abs(wb - wa), abs(hb - ha)))
 
 METRICS = {
     "MSE": metric_mse,
@@ -209,9 +212,10 @@ METRICS = {
     "Objects": metric_count_objects,
     "Holes": metric_count_holes,
     "Contours": metric_contour_hierarchy,
-    "ContoursStrict": metric_contours_strict,     # NEW
+    "ContoursStrict": metric_contours_strict,
     "EXACT": metric_exact,
-    "N_DIFF_PIXELS": metric_n_diff_pixels         # NEW
+    "N_DIFF_PIXELS": metric_n_diff_pixels,
+    "SIZE": metric_size,
 }
 
 DEFAULT_TOLERANCES = {
@@ -228,7 +232,26 @@ DEFAULT_TOLERANCES = {
     "Contours": "1",
     "ContoursStrict": "1,0.75,0.5",
     "EXACT": "1",
-    "N_DIFF_PIXELS": "thr:10 | 100,1000,5000"
+    "N_DIFF_PIXELS": "thr:10 | 100,1000,5000",
+    "SIZE": "0,2,5,10"
+}
+
+FRIENDLY_METRICS = {
+    "SIZE (dimensions)": "SIZE",
+    "N_DIFF_PIXELS (pixel count)": "N_DIFF_PIXELS",
+    "MSE": "MSE",
+    "MAE": "MAE",
+    "RMSE": "RMSE",
+    "PSNR": "PSNR",
+    "SSIM": "SSIM",
+    "NCC": "NCC",
+    "IoU": "IoU",
+    "ΔE": "ΔE",
+    "Objects": "Objects",
+    "Holes": "Holes",
+    "Contours": "Contours",
+    "ContoursStrict": "ContoursStrict",
+    "EXACT": "EXACT"
 }
 
 def compute_score(metric_name, value, max_score, tol_str, mode="bucket"):
@@ -271,6 +294,22 @@ def map_expected_from_student(student_fname, expected_dir):
         if os.path.exists(p): return p
     return ""
 
+# ------ helpers for SIZE fallback parsing ------
+def parse_expected_size_any(notes, tols):
+    nd = parse_notes_kv(notes)
+    ew = nd.get("expect_w") or nd.get("w") or nd.get("width")
+    eh = nd.get("expect_h") or nd.get("h") or nd.get("height")
+    if ew and eh:
+        try: return int(float(ew)), int(float(eh))
+        except: pass
+    # also accept a WxH pair anywhere in notes or tolerances
+    blob = f"{notes or ''} {tols or ''}"
+    m = re.search(r"(\d+)\s*[xX]\s*(\d+)", blob)
+    if m:
+        try: return int(m.group(1)), int(m.group(2))
+        except: pass
+    return None, None
+
 # ------------------ UI: Add Rule ------------------
 class RulePopup(QDialog):
     def __init__(self, parent=None, autofill_output=""):
@@ -279,12 +318,12 @@ class RulePopup(QDialog):
         layout = QFormLayout(self)
 
         self.output_field = QLineEdit(autofill_output)
-        self.metric_box = QComboBox(); self.metric_box.addItems(list(METRICS.keys()))
+        self.metric_box = QComboBox(); self.metric_box.addItems(list(FRIENDLY_METRICS.keys()))
         self.agg_box = QComboBox(); self.agg_box.addItems(['mean','median','max','trim10'])
         self.output_field.textChanged.connect(self.on_output_change)
         self.max_score = QSpinBox(); self.max_score.setRange(0,100); self.max_score.setValue(1)
         self.tol_edit = QLineEdit()
-        self.cout_expected_edit = QLineEdit()   # field for cout
+        self.cout_expected_edit = QLineEdit()
         self.notes_edit = QLineEdit()
         self.mode_box = QComboBox(); self.mode_box.addItems(["bucket","continuous"])
 
@@ -310,13 +349,14 @@ class RulePopup(QDialog):
             self.metric_box.clear(); self.metric_box.addItems(['exact','contains','regex'])
             self.tol_edit.clear()
         else:
-            if self.metric_box.count()!=len(METRICS):
-                self.metric_box.clear(); self.metric_box.addItems(list(METRICS.keys()))
+            if self.metric_box.count()!=len(FRIENDLY_METRICS):
+                self.metric_box.clear(); self.metric_box.addItems(list(FRIENDLY_METRICS.keys()))
         self.tol_edit.setVisible(not is_cout)
         self.cout_expected_edit.setVisible(is_cout)
         self.agg_box.setEnabled(False if is_cout else self.agg_box.isEnabled())
 
-    def on_metric_change(self, metric):
+    def on_metric_change(self, metric_display):
+        metric = FRIENDLY_METRICS.get(metric_display, metric_display)
         if metric in DEFAULT_TOLERANCES:
             self.tol_edit.setText(DEFAULT_TOLERANCES[metric])
         is_map = metric in ("ΔE","MAE","MSE")
@@ -334,7 +374,8 @@ class RulePopup(QDialog):
                 notes_text = f"{prefix},{notes_text}" if notes_text else prefix
         return {
             "output": out,
-            "metric": self.metric_box.currentText(),
+            "metric": (self.metric_box.currentText().lower() if out.lower()=="cout"
+                       else FRIENDLY_METRICS[self.metric_box.currentText()]),
             "max_score": float(self.max_score.value()),
             "tolerances": "" if out.lower()=="cout" else self.tol_edit.text().strip(),
             "mode": self.mode_box.currentText(),
@@ -373,7 +414,6 @@ def aggregate_map(m, mode="mean"):
 
 # ------------------ Mask helpers ------------------
 def overlay_mask_on_image(img_bgr, mask_gray, alpha=0.35):
-    """Return an RGB image with a red, semi-transparent mask overlay."""
     if img_bgr is None or mask_gray is None:
         return None
     h,w = img_bgr.shape[:2]
@@ -381,13 +421,12 @@ def overlay_mask_on_image(img_bgr, mask_gray, alpha=0.35):
         mask_gray = cv2.resize(mask_gray, (w,h), interpolation=cv2.INTER_NEAREST)
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
     over = img_rgb.copy()
-    red = np.zeros_like(over); red[:,:,0] = 255  # RGB red
+    red = np.zeros_like(over); red[:,:,0] = 255
     m = (mask_gray > 127)
     over[m] = np.clip((1.0 - alpha)*over[m] + alpha*red[m], 0, 255).astype(np.uint8)
     return over
 
 def ensure_mask_in_notes(table, mask_path):
-    """Guarantee 'mask=<path>' appears in Notes for all rows."""
     if not mask_path:
         return
     for r in range(table.rowCount()):
@@ -395,7 +434,6 @@ def ensure_mask_in_notes(table, mask_path):
         txt = (item.text() if item else "").strip()
         if f"mask={mask_path}" in txt:
             continue
-        # remove any old mask=... to avoid duplicates
         txt = re.sub(r"mask\s*=\s*[^,;]+", "", txt)
         txt = txt.strip(", ;")
         txt = f"{txt},mask={mask_path}" if txt else f"mask={mask_path}"
@@ -411,154 +449,241 @@ def extract_mask_from_notes(notes):
 
 # ------------------ Worker ------------------
 class BatchWorker(QThread):
-    progress = Signal(int, str); finished = Signal(list)
-    def __init__(self, student_dir, expected_dir, expected_image_path, rules, mask_path=None):
-        super().__init__(); self.student_dir=student_dir; self.expected_dir=expected_dir
-        self.expected_image_path=expected_image_path; self.rules=rules; self.mask_path=mask_path
-    def run(self):
-        subs = [f for f in sorted(os.listdir(self.student_dir)) if os.path.isdir(os.path.join(self.student_dir,f))]
-        if not subs: subs=[""]
-        total=max(1,len(subs)); results=[]; exp_img=None
-        if self.expected_image_path: exp_img = cv2.imread(self.expected_image_path)
-        base_mask = None
-        if self.mask_path and os.path.exists(self.mask_path):
-            base_mask = cv2.imread(self.mask_path, cv2.IMREAD_GRAYSCALE)
-            if base_mask is not None: base_mask=(base_mask>127).astype(np.uint8)
-        for i, sub in enumerate(subs):
-            base = os.path.join(self.student_dir, sub) if sub else self.student_dir
-            rowres={"student": sub or os.path.basename(self.student_dir)}; total_score=0.0
-            for rule in self.rules:
-                output=rule.get("output",""); metric=rule.get("metric",""); max_score=rule.get("max_score",1.0)
-                tols=rule.get("tolerances",""); mode=rule.get("mode","bucket"); notes=rule.get("notes","")
-                aggregation=rule.get("aggregation","mean")
-                # Row-level mask override
-                mask_path_notes = extract_mask_from_notes(notes)
-                mask_to_use = mask_path_notes if mask_path_notes else self.mask_path
-                rowres["mask"] = mask_to_use or ""
-                mask = None
-                if mask_to_use and os.path.exists(mask_to_use):
-                    mask = cv2.imread(mask_to_use, cv2.IMREAD_GRAYSCALE)
-                    if mask is not None: mask=(mask>127).astype(np.uint8)
+    progress = Signal(int, str)
+    finished = Signal(list)
 
-                if output.lower()=="cout":
+    def __init__(self, student_dir, expected_dir, expected_image_path, rules, mask_path=None):
+        super().__init__()
+        self.student_dir = student_dir
+        self.expected_dir = expected_dir
+        self.expected_image_path = expected_image_path
+        self.rules = rules
+        self.mask_path = mask_path
+
+        self._exp_index_exact = {}
+        self._exp_cache_fuzzy = {}
+        self._stud_cache = {}
+
+    def _index_expected(self):
+        if not self.expected_dir or self._exp_index_exact:
+            return
+        for root, _, files in os.walk(self.expected_dir):
+            for fn in files:
+                self._exp_index_exact.setdefault(fn.lower(), os.path.join(root, fn))
+
+    def _find_in_expected(self, key_name: str) -> str:
+        if not key_name:
+            return ""
+        name_lower = key_name.lower()
+        if name_lower in self._exp_index_exact:
+            return self._exp_index_exact[name_lower]
+        if name_lower in self._exp_cache_fuzzy:
+            return self._exp_cache_fuzzy[name_lower]
+        stem = os.path.splitext(name_lower)[0]
+        if stem:
+            for fn_lower, full in self._exp_index_exact.items():
+                if stem in fn_lower:
+                    self._exp_cache_fuzzy[name_lower] = full
+                    return full
+        self._exp_cache_fuzzy[name_lower] = ""
+        return ""
+
+    def _find_student_file(self, base_dir: str, target_name: str) -> str:
+        key = (base_dir, (target_name or "").lower())
+        if key in self._stud_cache:
+            return self._stud_cache[key]
+
+        target_lower = key[1]
+        if target_lower:
+            cand = os.path.join(base_dir, target_name)
+            if os.path.exists(cand):
+                self._stud_cache[key] = cand
+                return cand
+
+        for root, _, files in os.walk(base_dir):
+            for fn in files:
+                if fn.lower() == target_lower:
+                    p = os.path.join(root, fn)
+                    self._stud_cache[key] = p
+                    return p
+            stem = os.path.splitext(target_lower)[0]
+            if stem:
+                for fn in files:
+                    if stem and stem in fn.lower():
+                        p = os.path.join(root, fn)
+                        self._stud_cache[key] = p
+                        return p
+
+        self._stud_cache[key] = ""
+        return ""
+
+    def _strip_stud_suffix(self, name: str) -> str:
+        base = os.path.splitext(os.path.basename(name))[0]
+        return re.sub(r'([_-])(stud|student)$', '', base, flags=re.IGNORECASE)
+
+    def _safe_number(self, x):
+        try:
+            xf = float(x)
+            if math.isnan(xf) or math.isinf(xf):
+                return 0.0
+            return xf
+        except Exception:
+            return 0.0
+
+    def run(self):
+        self._index_expected()
+
+        subs = [d for d in sorted(os.listdir(self.student_dir))
+                if os.path.isdir(os.path.join(self.student_dir, d))]
+        if not subs:
+            subs = [""]
+
+        explicit_expected = cv2.imread(self.expected_image_path) if self.expected_image_path else None
+
+        results = []
+        steps = max(1, len(subs) * max(1, len(self.rules)))
+        step_done = 0
+
+        for sub in subs:
+            base = os.path.join(self.student_dir, sub) if sub else self.student_dir
+            student_label = sub or os.path.basename(self.student_dir)
+
+            rowres = {"student": student_label}
+            total_score = 0.0
+
+            # remember last resolved student path to support blank Output
+            last_stud_path = None
+
+            for rule in self.rules:
+                output = (rule.get("output") or "").strip()
+                metric = (rule.get("metric") or "").strip()
+                max_score = rule.get("max_score", 1.0)
+                tols = rule.get("tolerances", "") or ""
+                mode = rule.get("mode", "bucket") or "bucket"
+                notes = rule.get("notes", "") or ""
+                aggregation = rule.get("aggregation", "mean") or "mean"
+
+                if output.lower() == "cout":
                     txt = read_console_text(base, notes)
                     nd = parse_notes_kv(notes)
-                    exp_txt = nd.get("exp_cout") or rule.get("expected_cout","") or tols or notes
-                    val = console_compare(txt, exp_txt, metric.lower() if metric else "exact")
-                    score = max_score * (1.0 if val>=1.0 else 0.0)
+                    expected_text = nd.get("exp_cout", "") or tols
+                    comp_mode = (metric or "exact").lower()
+                    val = console_compare(txt, expected_text, comp_mode)
+                    score = float(max_score) * (1.0 if val >= 1.0 else 0.0)
+                    rowres[f"{metric}_val"] = val
+                    rowres[f"{metric}_score"] = score
+                    total_score += score
+                    step_done += 1
+                    self.progress.emit(int(step_done * 100 / steps), student_label)
+                    continue
+
+                mask_path_notes = extract_mask_from_notes(notes)
+                mask_path_to_use = mask_path_notes if mask_path_notes else self.mask_path
+                rowres["mask"] = mask_path_to_use or ""
+
+                # student file: use specified output; if blank, reuse last
+                stud_path = self._find_student_file(base, output) if output else (last_stud_path or "")
+                if stud_path:
+                    last_stud_path = stud_path
+
+                # expected image
+                exp_img = None
+                if explicit_expected is not None:
+                    exp_img = explicit_expected
                 else:
-                    eimg = exp_img
-                    simg = None
-                    if output:
-                        sp = os.path.join(base, output)
-                        if os.path.exists(sp): simg = cv2.imread(sp)
-                    if eimg is None or simg is None:
-                        val=float('nan'); score=0.0
+                    expected_path = ""
+                    if (output or stud_path) and self.expected_dir:
+                        probe_name = output or os.path.basename(stud_path)
+                        expected_path = map_expected_from_student(probe_name, self.expected_dir)
+                    if not expected_path and self.expected_dir and (output or stud_path):
+                        probe = output or (os.path.basename(stud_path) if stud_path else "")
+                        stripped = self._strip_stud_suffix(probe)
+                        expected_path = self._find_in_expected(stripped) or self._find_in_expected(probe)
+                    if expected_path:
+                        exp_img = cv2.imread(expected_path)
+
+                # SIZE fallback: accept WxH from notes/tols if no expected image
+                if exp_img is None and metric == "SIZE":
+                    ew, eh = parse_expected_size_any(notes, tols)
+                    if ew and eh:
+                        exp_img = np.zeros((eh, ew, 3), dtype=np.uint8)
+
+                if exp_img is None:
+                    rowres[f"{metric}_val"] = "MISSING expected"
+                    rowres[f"{metric}_score"] = 0.0
+                    step_done += 1
+                    self.progress.emit(int(step_done * 100 / steps), student_label)
+                    continue
+
+                stud_img = cv2.imread(stud_path) if stud_path else None
+                if stud_img is None:
+                    rowres[f"{metric}_val"] = "MISSING student"
+                    rowres[f"{metric}_score"] = 0.0
+                    step_done += 1
+                    self.progress.emit(int(step_done * 100 / steps), student_label)
+                    continue
+
+                if mask_path_to_use and os.path.exists(mask_path_to_use):
+                    mask = cv2.imread(mask_path_to_use, cv2.IMREAD_GRAYSCALE)
+                    if mask is not None:
+                        mask = (mask > 127).astype(np.uint8)
+                        if mask.shape[:2] != exp_img.shape[:2]:
+                            mask = cv2.resize(mask, (exp_img.shape[1], exp_img.shape[0]),
+                                              interpolation=cv2.INTER_NEAREST)
+                            mask = (mask > 0).astype(np.uint8)
+                        exp_use = exp_img * mask[:, :, None]
+                        stud_use = stud_img * mask[:, :, None]
                     else:
-                        A=eimg.copy(); B=simg.copy()
-                        if mask is not None:
-                            if A.shape[:2]!=mask.shape:
-                                mres=cv2.resize(mask,(A.shape[1],A.shape[0]),interpolation=cv2.INTER_NEAREST)
-                            else: mres=mask
-                            A=A*mres[:,:,None]; B=B*mres[:,:,None]
-                        func=METRICS.get(metric)
-                        try:
-                            if metric in {"Objects","Holes"}:
-                                val=float(func(B,None))
-                            elif metric in {"Contours","ContoursStrict"}:
-                                val=float(func(A,B))
-                            elif metric=="ΔE" and aggregation:
-                                val=aggregate_map(metric_deltaE_map(A,B), aggregation)
-                            elif metric=="MAE" and aggregation:
-                                val=aggregate_map(metric_mae_map(A,B), aggregation)
-                            elif metric=="MSE" and aggregation:
-                                val=aggregate_map(metric_mse_map(A,B), aggregation)
-                            elif metric=="N_DIFF_PIXELS":
-                                thr, logic, use_gray, tol_clean = parse_ndiff_params(tols, notes)
-                                val = float(metric_n_diff_pixels(A,B,thr=thr,logic=logic,use_gray=use_gray))
-                                tols = tol_clean
-                            else:
-                                val=float(func(A,B)) if func else float('nan')
-                        except Exception:
-                            val=float('nan')
-                        score=compute_score(metric, val, max_score, tols, mode)
-                rowres[f"{metric}_val"]=val; rowres[f"{metric}_score"]=score; total_score+=float(score)
-            rowres["total_score"]=total_score; results.append(rowres)
-            self.progress.emit(int((i+1)/total*100), sub or os.path.basename(self.student_dir))
+                        exp_use, stud_use = exp_img, stud_img
+                else:
+                    exp_use, stud_use = exp_img, stud_img
+
+                func = METRICS.get(metric)
+                try:
+                    if metric in {"Objects", "Holes"}:
+                        val = float(func(stud_use, None))
+                    elif metric in {"Contours", "ContoursStrict"}:
+                        val = float(func(exp_use, stud_use))
+                    elif metric == "ΔE" and aggregation:
+                        val = aggregate_map(metric_deltaE_map(exp_use, stud_use), aggregation)
+                    elif metric == "MAE" and aggregation:
+                        val = aggregate_map(metric_mae_map(exp_use, stud_use), aggregation)
+                    elif metric == "MSE" and aggregation:
+                        val = aggregate_map(metric_mse_map(exp_use, stud_use), aggregation)
+                    elif metric == "N_DIFF_PIXELS":
+                        thr, logic, use_gray, tol_clean = parse_ndiff_params(tols, notes)
+                        val = float(metric_n_diff_pixels(exp_use, stud_use, thr=thr,
+                                                         logic=logic, use_gray=use_gray))
+                        tols = tol_clean
+                    else:
+                        val = float(func(exp_use, stud_use)) if func else 0.0
+                except Exception:
+                    val = 0.0
+
+                try:
+                    if math.isnan(val) or math.isinf(val):
+                        val = 0.0
+                except Exception:
+                    val = 0.0
+
+                score = compute_score(metric, val, max_score, tols, mode)
+                try:
+                    if math.isnan(score) or math.isinf(score):
+                        score = 0.0
+                except Exception:
+                    score = 0.0
+
+                rowres[f"{metric}_val"] = val
+                rowres[f"{metric}_score"] = score
+                total_score += float(score)
+
+                step_done += 1
+                self.progress.emit(int(step_done * 100 / steps), student_label)
+
+            rowres["total_score"] = total_score
+            results.append(rowres)
+
         self.finished.emit(results)
-
-# ----- Interactive ROI rectangle drawing -----
-class RectRoiDialog(QDialog):
-    def __init__(self, image_path, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Draw ROI (drag to draw a rectangle)")
-        self.image_path = image_path
-        self.img = cv2.imread(image_path)
-        if self.img is None:
-            raise RuntimeError("Failed to load image for ROI drawing.")
-        self.img_rgb = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
-        self.h, self.w = self.img_rgb.shape[:2]
-        self.label = QLabel(); self.label.setAlignment(Qt.AlignCenter)
-        self.pix = QPixmap.fromImage(QImage(self.img_rgb.data, self.w, self.h, self.w*3, QImage.Format_RGB888))
-        self.view_w = min(900, self.w); self.view_h = int(self.h * (self.view_w/self.w))
-        self.label.setPixmap(self.pix.scaled(self.view_w, self.view_h, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        self.start = None; self.end = None; self.drawing = False
-        lay = QVBoxLayout(self); lay.addWidget(self.label)
-        btns = QHBoxLayout()
-        bclr = QPushButton("Clear"); bok = QPushButton("Use ROI"); bcancel = QPushButton("Cancel")
-        bclr.clicked.connect(self.clear); bok.clicked.connect(self.accept); bcancel.clicked.connect(self.reject)
-        btns.addWidget(bclr); btns.addWidget(bok); btns.addWidget(bcancel); lay.addLayout(btns)
-        self.label.mousePressEvent = self.on_press
-        self.label.mouseMoveEvent = self.on_move
-        self.label.mouseReleaseEvent = self.on_release
-        self.overlay = QPixmap(self.label.pixmap())
-        self.scale_x = self.w / self.label.pixmap().width()
-        self.scale_y = self.h / self.label.pixmap().height()
-
-    def clear(self):
-        self.start = self.end = None
-        self.label.setPixmap(self.pix.scaled(self.view_w, self.view_h, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        self.overlay = QPixmap(self.label.pixmap())
-
-    def on_press(self, ev):
-        if ev.buttons() & Qt.LeftButton:
-            self.drawing = True
-            self.start = ev.position().toPoint()
-            self.end = self.start
-            self.redraw()
-
-    def on_move(self, ev):
-        if self.drawing:
-            self.end = ev.position().toPoint()
-            self.redraw()
-
-    def on_release(self, ev):
-        if self.drawing:
-            self.end = ev.position().toPoint()
-            self.drawing = False
-            self.redraw()
-
-    def redraw(self):
-        self.overlay = QPixmap(self.label.pixmap())
-        painter = QPainter(self.overlay)
-        painter.setPen(QPen(QColor(255,0,0), 2, Qt.SolidLine))
-        if self.start and self.end:
-            r = QRect(self.start, self.end).normalized()
-            painter.drawRect(r)
-        painter.end()
-        self.label.setPixmap(self.overlay)
-
-    def get_mask_path(self):
-        if not (self.start and self.end):
-            return None
-        r = QRect(self.start, self.end).normalized()
-        x1 = int(r.left()); y1 = int(r.top())
-        x2 = int(r.right()); y2 = int(r.bottom())
-        mask = np.zeros((self.h, self.w), dtype=np.uint8)
-        cv2.rectangle(mask, (x1,y1), (x2,y2), 255, -1)
-        tmp = os.path.join(tempfile.gettempdir(), "roi_mask_rect.png")
-        cv2.imwrite(tmp, mask)
-        return tmp
 
 # ------------------ Main Window ------------------
 class ImageGraderApp(QMainWindow):
@@ -578,7 +703,7 @@ class ImageGraderApp(QMainWindow):
         btnMask=QPushButton("Load Mask / ROI"); btnMask.clicked.connect(self.on_load_mask)
         btnClear=QPushButton("Clear Images"); btnClear.clicked.connect(self.on_clear_images)
         btnReset=QPushButton("Reset All"); btnReset.clicked.connect(self.on_reset_all)
-        self.mask_info = QLabel("Mask: (none)")  # shows current mask basename
+        self.mask_info = QLabel("Mask: (none)")
         for wdg in [btnE,btnS,btnED,btnSD, QLabel("Current Student:"), self.student_picker, btnRefresh, btnMask, btnClear, btnReset, self.mask_info]:
             top.addWidget(wdg)
         v.addLayout(top)
@@ -596,7 +721,7 @@ class ImageGraderApp(QMainWindow):
         btnSingle=QPushButton("Run Single Eval"); btnSingle.clicked.connect(self.on_run_single)
         btnBatch=QPushButton("Batch Evaluate (student dir)"); btnBatch.clicked.connect(self.on_batch_eval)
         btnImp=QPushButton("Import Rules (JSON)"); btnImp.clicked.connect(self.on_import_json)
-        btnExp=QPushButton("Export Rules (JSON/ugly)"); btnExp.clicked.connect(self.on_export_rules)
+        btnExp=QPushButton("Export Rules (JSON)"); btnExp.clicked.connect(self.on_export_rules)
         for wdg in [btnAdd,btnDel,btnSingle,btnBatch,btnImp,btnExp]: bottom.addWidget(wdg)
         v.addLayout(bottom)
         self.rules_text=QTextEdit(); self.rules_text.setPlaceholderText("Rules text (JSON list).")
@@ -609,7 +734,6 @@ class ImageGraderApp(QMainWindow):
         v.addLayout(util)
         self.setCentralWidget(w)
 
-    # ---------- preview helpers ----------
     def _update_previews(self):
         if self.expected_image_path:
             self._show_image(self.expected_image_path, self.lbl_expected, with_mask=True)
@@ -638,7 +762,6 @@ class ImageGraderApp(QMainWindow):
         label.setPixmap(QPixmap.fromImage(q).scaled(max_size,max_size,Qt.KeepAspectRatio))
         return img
 
-    # ---------- top buttons ----------
     def on_pick_expected_dir(self):
         d=QFileDialog.getExistingDirectory(self,"Select Expected Directory")
         if d: self.expected_dir=d; QMessageBox.information(self,"Selected",f"Expected directory set to:\n{d}")
@@ -680,13 +803,13 @@ class ImageGraderApp(QMainWindow):
                 QMessageBox.warning(self,"Missing expected image","Please load an expected image first to draw an ROI.")
                 return
             try:
-                dlg = RectRoiDialog(self.expected_image_path, self)
+                dlg = RectRoiDialog(self.expected_image_path, self)  # noqa: F821
                 if dlg.exec() == QDialog.Accepted:
                     mp = dlg.get_mask_path()
                     if mp:
                         self.mask_path = mp
                         self.mask_info.setText(f"Mask: {os.path.basename(mp)}")
-                        ensure_mask_in_notes(self.table, self.mask_path)  # save to refs
+                        ensure_mask_in_notes(self.table, self.mask_path)
                         QMessageBox.information(self,"ROI","Rectangle ROI captured and applied.")
                         self._update_previews()
                         return
@@ -700,7 +823,7 @@ class ImageGraderApp(QMainWindow):
         if p:
             self.mask_path=p
             self.mask_info.setText(f"Mask: {os.path.basename(p)}")
-            ensure_mask_in_notes(self.table, self.mask_path)  # save to refs
+            ensure_mask_in_notes(self.table, self.mask_path)
             QMessageBox.information(self,"Mask",f"Mask loaded: {p}")
             self._update_previews()
 
@@ -722,7 +845,6 @@ class ImageGraderApp(QMainWindow):
             self.table.setItem(row,0,QTableWidgetItem(r["output"])); self.table.setItem(row,1,QTableWidgetItem(r["metric"]))
             self.table.setItem(row,2,QTableWidgetItem(str(r["max_score"]))); self.table.setItem(row,3,QTableWidgetItem(r["tolerances"]))
             self.table.setItem(row,4,QTableWidgetItem(r["mode"])); self.table.setItem(row,5,QTableWidgetItem(r["aggregation"]))
-            # Ensure new rows also carry mask reference if any
             notes = r["notes"]
             if self.mask_path and f"mask={self.mask_path}" not in notes:
                 notes = (notes + "," if notes else "") + f"mask={self.mask_path}"
@@ -755,7 +877,6 @@ class ImageGraderApp(QMainWindow):
             out = out_item.text().strip() if out_item else ""; metric=met_item.text().strip()
             max_score=float(max_item.text()) if max_item else 1.0; tol=tol_item.text() if tol_item else ""; mode=mode_item.text() if mode_item else "bucket"
             agg=agg_item.text().strip() if agg_item else ""; notes=notes_item.text().strip() if notes_item else ""
-            # Resolve mask from notes or global
             mask_path = self._load_mask_from_notes_or_global(notes)
             mask=None
             if mask_path:
@@ -763,7 +884,6 @@ class ImageGraderApp(QMainWindow):
                 if mimg is not None: mask=(mimg>127).astype(np.uint8)
 
             if out.lower()=="cout":
-                # choose base dir
                 if self.student_dir:
                     sel=self.student_picker.currentText().strip() if self.student_picker.count()>0 else ""
                     if sel and sel!="(no subfolders)" and os.path.isdir(os.path.join(self.student_dir, sel)):
@@ -802,14 +922,17 @@ class ImageGraderApp(QMainWindow):
                     elif metric=="N_DIFF_PIXELS":
                         thr, logic, use_gray, tol_clean = parse_ndiff_params(tol, notes)
                         val = float(metric_n_diff_pixels(A,B,thr=thr,logic=logic,use_gray=use_gray))
-                        tol = tol_clean  # for scoring
+                        tol = tol_clean
+                    elif metric == "SIZE_DIFF":
+                        val = 0.0
+                    elif metric == "SIZE_MATCH":
+                        val = float(metric_size_match(A, B))
                     else: val=float(func(A,B))
                 except Exception: val=float('nan')
             score=compute_score(metric, val, max_score, tol, mode)
-            self.table.setItem(row,7,QTableWidgetItem(f"{val:.4f} | score {score:.2f}"))
+            self.table.setItem(row,7,QTableWidgetItem(f"Value {val:.4f} | Score {score:.2f}"))
             res.append(f"{metric}: {val:.4f} -> {score:.2f}")
         QMessageBox.information(self,"Single Evaluation Results","\n".join(res))
-        # Also refresh previews in case mask changed
         self._update_previews()
 
     def on_batch_eval(self):
@@ -859,11 +982,9 @@ class ImageGraderApp(QMainWindow):
             restored_mask = ""
             for r in rules:
                 notes = r.get("notes","")
-                # capture exp_cout if present (kept from your previous version)
                 if r.get("expected_cout"):
                     prefix = f"exp_cout={r.get('expected_cout')}"
                     notes = f"{prefix},{notes}" if notes else prefix
-                # detect mask=... and restore overlay
                 mpath = extract_mask_from_notes(notes)
                 if (not restored_mask) and mpath and os.path.exists(mpath):
                     restored_mask = mpath
@@ -967,7 +1088,6 @@ class ImageGraderApp(QMainWindow):
             self.table.setItem(row,0,QTableWidgetItem(o)); self.table.setItem(row,1,QTableWidgetItem('EXACT'))
             self.table.setItem(row,2,QTableWidgetItem('1')); self.table.setItem(row,3,QTableWidgetItem(''))
             self.table.setItem(row,4,QTableWidgetItem('bucket')); self.table.setItem(row,5,QTableWidgetItem('mean'))
-            # include mask reference if currently set
             notes = 'from scan'
             if self.mask_path:
                 notes += f",mask={self.mask_path}"
@@ -975,8 +1095,9 @@ class ImageGraderApp(QMainWindow):
         if console:
             self.table.insertRow(row)
             self.table.setItem(row,0,QTableWidgetItem('cout')); self.table.setItem(row,1,QTableWidgetItem('exact'))
-            self.table.setItem(row,2,QTableWidgetItem('1')); self.table.setItem(row,3,QTableWidgetItem(''))
-            self.table.setItem(row,4,QTableWidgetItem('bucket')); self.table.setItem(row,5,QTableWidgetItem(''))  # agg hidden for cout
+            self.table.setItem(row,2,QTableWidgetItem('1')); self.table.setItem(row,3,QTableWidgetItem('')
+            )
+            self.table.setItem(row,4,QTableWidgetItem('bucket')); self.table.setItem(row,5,QTableWidgetItem(''))
             notes = 'file=stdout.txt'
             if self.mask_path:
                 notes += f",mask={self.mask_path}"
