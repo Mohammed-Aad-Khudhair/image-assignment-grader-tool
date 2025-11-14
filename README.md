@@ -1,1 +1,7 @@
-The application enables teachers to automatically compare student-generated images against expected results using a wide range of evaluation metrics. It supports applying masks or regions of interest (ROIs) to focus grading on specific areas of an image. Rules can be created, managed, and exported directly through the graphical interface, eliminating the need to write them manually, making the tool more user-friendly and efficient for preparing and running student tests.
+ImgGrader — automated grading system for image-processing tasks
+Copyright (C) 2025 Mohammed A. Khudhair
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
