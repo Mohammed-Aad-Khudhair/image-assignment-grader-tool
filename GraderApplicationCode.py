@@ -1,4 +1,3 @@
-# Final-code (with COUT expected field + aggregation guard + MASK overlay+persistence + SIZE fixes)
 import sys, os, csv, json, math, re, tempfile
 import numpy as np
 import cv2
@@ -1105,3 +1104,4 @@ class ImageGraderApp(QMainWindow):
 
 if __name__ == "__main__":
     app=QApplication(sys.argv); win=ImageGraderApp(); win.show(); sys.exit(app.exec())
+
