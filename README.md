@@ -4,7 +4,7 @@
 
 ## Description
 
-ImgGrader is a Python-based GUI application for automated grading of image-processing assignments. It compares student outputs against instructor-provided reference images (and optional console output) using flexible, rule-based scoring. Instructors can configure grading rules through the graphical interface—no scripting required—making it easy to create objective, reproducible, and scalable grading workflows for large classes.
+ImgGrader is a Python-based GUI application for automated grading of image-processing assignments. It compares student outputs against instructor-provided reference images (and optional console output) using flexible, rule-based scoring. Instructors can configure grading rules through the graphical interface, no scripting required, making it easy to create objective, reproducible, and scalable grading workflows for large classes.
 
 ## Key Features
 
@@ -18,7 +18,7 @@ ImgGrader is a Python-based GUI application for automated grading of image-proce
 
 ## User Guide 
 
--Check App-Guide 
+- Check App-Guide 
 
 ## Installation
 
