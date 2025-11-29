@@ -1,6 +1,7 @@
 # ImgGrader: Automated Grading for Image Processing Tasks
 
-![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE.txt)
+
 
 ## Description
 
