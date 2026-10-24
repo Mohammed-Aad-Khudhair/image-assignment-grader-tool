@@ -124,3 +124,28 @@ def test_legacy_expected_cout_field_moves_to_tolerances(g):
             "expected_cout": "Area: 1, Perimeter: 2", "tolerances": ""}
     notes, tol = g._cout_fields(rule)
     assert tol == "Area: 1, Perimeter: 2" and notes == "file=stdout.txt"
+
+
+def test_reference_suffixes_are_matched(tmp_path):
+    """Real course layout: references named *_gt.png / *-reference.png,
+    student files *_stud.png; expected images found via Expected Dir only."""
+    E = tmp_path / "expected"; S = tmp_path / "students" / "s1"; E.mkdir(); S.mkdir(parents=True)
+    cv2.imwrite(str(E / "H01_vessels_gt.png"), disk())
+    cv2.imwrite(str(E / "H01_fov.png"), disk(r=45))              # other files in the folder are ignored
+    cv2.imwrite(str(E / "lesion_mask-reference.png"), disk(r=20))
+    cv2.imwrite(str(S / "H01_vessels_stud.png"), disk())
+    cv2.imwrite(str(S / "lesion_mask_stud.png"), disk(r=20))
+    rules = [{"output": "H01_vessels_stud.png", "metric": "IoU", "max_score": 1, "tolerances": "0.9", "mode": "bucket"},
+             {"output": "lesion_mask_stud.png", "metric": "IoU", "max_score": 1, "tolerances": "0.9", "mode": "bucket"}]
+    row = run_batch(str(tmp_path / "students"), rules, expected_dir=str(E))["s1"]
+    assert row["R1_IoU_expected_path"].endswith("H01_vessels_gt.png") and row["R1_IoU_val"] == 1.0
+    assert row["R2_IoU_expected_path"].endswith("lesion_mask-reference.png") and row["R2_IoU_val"] == 1.0
+
+
+def test_reference_and_plain_file_both_present_is_ambiguous(tmp_path):
+    E = tmp_path / "expected"; S = tmp_path / "students" / "s1"; E.mkdir(); S.mkdir(parents=True)
+    cv2.imwrite(str(E / "img_gt.png"), disk()); cv2.imwrite(str(E / "img_ref.png"), disk())
+    cv2.imwrite(str(S / "img_stud.png"), disk())
+    rule = {"output": "img_stud.png", "metric": "IoU", "max_score": 1, "tolerances": "0.9", "mode": "bucket"}
+    row = run_batch(str(tmp_path / "students"), [rule], expected_dir=str(E))["s1"]
+    assert row["R1_IoU_val"] == "AMBIGUOUS expected" and row["R1_IoU_score"] == 0.0

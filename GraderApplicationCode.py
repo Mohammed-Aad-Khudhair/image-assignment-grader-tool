@@ -712,10 +712,12 @@ class BatchWorker(QThread):
             return self._exp_index_exact[name_lower], "exact"
         if name_lower in self._exp_cache_fuzzy:
             return self._exp_cache_fuzzy[name_lower]
+        # Reference files are often named e.g. H01_vessels_gt.png or
+        # lesion_mask-reference.png, so common reference suffixes are ignored too.
         stem = self._strip_stud_suffix(name_lower).lower()
         cands = sorted(full for fn_lower, full in self._exp_index_exact.items()
                        if fn_lower.endswith(IMG_EXTS)
-                       and self._strip_stud_suffix(fn_lower).lower() == stem)
+                       and self._strip_ref_suffix(fn_lower) == stem)
         res = self._resolve_candidates(cands)
         self._exp_cache_fuzzy[name_lower] = res
         return res
@@ -751,6 +753,10 @@ class BatchWorker(QThread):
         if not cands:
             return "", "missing"
         return "", "AMBIGUOUS: " + " | ".join(os.path.basename(c) for c in cands)
+
+    def _strip_ref_suffix(self, name: str) -> str:
+        base = os.path.splitext(os.path.basename(name))[0]
+        return re.sub(r'([_-])(gt|ref|reference|expected)$', '', base, flags=re.IGNORECASE).lower()
 
     def _strip_stud_suffix(self, name: str) -> str:
         base = os.path.splitext(os.path.basename(name))[0]
