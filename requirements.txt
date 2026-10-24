@@ -1,10 +1,5 @@
-pip install -r requirements.txt
-Or install the following manually:
-PySide6
-opencv-python
-numpy
-scikit-image
-scipy
-pandas
-Pillow
-matplotlib
+# Install with:  pip install -r requirements.txt
+PySide6>=6.5
+opencv-python>=4.8
+numpy>=1.24
+scikit-image>=0.21
