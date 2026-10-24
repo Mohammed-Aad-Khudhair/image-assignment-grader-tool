@@ -57,7 +57,7 @@ python GraderApplicationCode.py
 The `rules/` folder contains importable rule sets for the two case studies in the paper:
 
 - `isic_lesion_rules.json` – lesion segmentation (ISIC 2017, Task 1)
-- `hrf_vessel_rules.json` – retinal vessel segmentation (HRF; images H01, G12, DR07)
+- `hrf_H01_rules.json`, `hrf_G12_rules.json`, `hrf_DR07_rules.json` – retinal vessel segmentation (HRF), one rule set per reference image; load the matching expected image before running a batch
 
 Relative mask paths in a rule file (e.g. `mask=./expected/H01_fov.png`) are resolved from the folder of the rule file.
 
