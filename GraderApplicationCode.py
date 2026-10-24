@@ -15,6 +15,8 @@ from skimage.metrics import structural_similarity as sk_ssim
 from skimage.color import rgb2lab, deltaE_ciede2000
 from collections import Counter
 
+IMG_EXTS = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
+
 # ---------- Metrics ----------
 def _ensure_same_size(a, b):
     if a.shape[:2] != b.shape[:2]:
@@ -69,17 +71,37 @@ def metric_deltaE(a, b):
     dE = deltaE_ciede2000(a_lab, b_lab)
     return float(np.mean(dE))
 
-def metric_count_objects(a, _b=None):
-    gray = cv2.cvtColor(a, cv2.COLOR_BGR2GRAY)
+def _count_objects(img):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     _, th = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
     n, _ = cv2.connectedComponents(th)
     return max(0, int(n-1))
 
-def metric_count_holes(a, _b=None):
-    gray = cv2.cvtColor(a, cv2.COLOR_BGR2GRAY)
-    _, inv = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY_INV)
-    n, _ = cv2.connectedComponents(inv)
-    return max(0, int(n-1))
+def _count_holes(img):
+    # A hole is a background region enclosed by foreground (inner contour);
+    # the outer background is not counted.
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    _, th = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+    cnts, hier = cv2.findContours(th, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    if hier is None:
+        return 0
+    return int(sum(1 for h in hier[0] if h[3] != -1))
+
+def metric_count_objects(a, b):
+    # Objects miscount |C(A) - C(B)|, lower is better.
+    return abs(_count_objects(a) - _count_objects(b))
+
+def metric_count_holes(a, b):
+    # Holes miscount |H(A) - H(B)|, lower is better.
+    return abs(_count_holes(a) - _count_holes(b))
+
+def metric_euler(a, b):
+    # Euler-number difference |chi(A) - chi(B)| with chi = objects - holes,
+    # lower is better. Catches topological errors (e.g. a spurious hole
+    # inside a region) that leave IoU almost unchanged.
+    chi_a = _count_objects(a) - _count_holes(a)
+    chi_b = _count_objects(b) - _count_holes(b)
+    return abs(chi_a - chi_b)
 
 def metric_contour_hierarchy(a, b):
     a_gray = cv2.cvtColor(a, cv2.COLOR_BGR2GRAY)
@@ -210,6 +232,7 @@ METRICS = {
     "ΔE": metric_deltaE,
     "Objects": metric_count_objects,
     "Holes": metric_count_holes,
+    "Euler": metric_euler,
     "Contours": metric_contour_hierarchy,
     "ContoursStrict": metric_contours_strict,
     "EXACT": metric_exact,
@@ -228,6 +251,7 @@ DEFAULT_TOLERANCES = {
     "ΔE": "1,2,10,50",
     "Objects": "0",
     "Holes": "0",
+    "Euler": "0",
     "Contours": "1",
     "ContoursStrict": "1,0.75,0.5",
     "EXACT": "1",
@@ -248,6 +272,7 @@ FRIENDLY_METRICS = {
     "ΔE": "ΔE",
     "Objects": "Objects",
     "Holes": "Holes",
+    "Euler": "Euler",
     "Contours": "Contours",
     "ContoursStrict": "ContoursStrict",
     "EXACT": "EXACT"
@@ -470,51 +495,55 @@ class BatchWorker(QThread):
             for fn in files:
                 self._exp_index_exact.setdefault(fn.lower(), os.path.join(root, fn))
 
-    def _find_in_expected(self, key_name: str) -> str:
+    def _find_in_expected(self, key_name: str):
+        """Return (path, status). status: 'exact', 'stem', 'missing' or
+        'AMBIGUOUS: a | b'. Ambiguous matches return no path (fail fast)."""
         if not key_name:
-            return ""
+            return "", "missing"
         name_lower = key_name.lower()
         if name_lower in self._exp_index_exact:
-            return self._exp_index_exact[name_lower]
+            return self._exp_index_exact[name_lower], "exact"
         if name_lower in self._exp_cache_fuzzy:
             return self._exp_cache_fuzzy[name_lower]
-        stem = os.path.splitext(name_lower)[0]
-        if stem:
-            for fn_lower, full in self._exp_index_exact.items():
-                if stem in fn_lower:
-                    self._exp_cache_fuzzy[name_lower] = full
-                    return full
-        self._exp_cache_fuzzy[name_lower] = ""
-        return ""
+        stem = self._strip_stud_suffix(name_lower).lower()
+        cands = sorted(full for fn_lower, full in self._exp_index_exact.items()
+                       if fn_lower.endswith(IMG_EXTS)
+                       and self._strip_stud_suffix(fn_lower).lower() == stem)
+        res = self._resolve_candidates(cands)
+        self._exp_cache_fuzzy[name_lower] = res
+        return res
 
-    def _find_student_file(self, base_dir: str, target_name: str) -> str:
+    def _find_student_file(self, base_dir: str, target_name: str):
+        """Return (path, status). Exact filename first, then exact stem match
+        after stripping the student suffix. More than one candidate is
+        reported as AMBIGUOUS and no file is used (fail fast)."""
         key = (base_dir, (target_name or "").lower())
         if key in self._stud_cache:
             return self._stud_cache[key]
-
         target_lower = key[1]
-        if target_lower:
-            cand = os.path.join(base_dir, target_name)
-            if os.path.exists(cand):
-                self._stud_cache[key] = cand
-                return cand
-
+        exact, stem_hits = [], []
+        stem = self._strip_stud_suffix(target_lower).lower() if target_lower else ""
         for root, _, files in os.walk(base_dir):
             for fn in files:
-                if fn.lower() == target_lower:
-                    p = os.path.join(root, fn)
-                    self._stud_cache[key] = p
-                    return p
-            stem = os.path.splitext(target_lower)[0]
-            if stem:
-                for fn in files:
-                    if stem and stem in fn.lower():
-                        p = os.path.join(root, fn)
-                        self._stud_cache[key] = p
-                        return p
+                fl = fn.lower()
+                if fl == target_lower:
+                    exact.append(os.path.join(root, fn))
+                elif stem and fl.endswith(IMG_EXTS) and self._strip_stud_suffix(fl).lower() == stem:
+                    stem_hits.append(os.path.join(root, fn))
+        if exact:
+            res = self._resolve_candidates(sorted(exact), "exact")
+        else:
+            res = self._resolve_candidates(sorted(stem_hits))
+        self._stud_cache[key] = res
+        return res
 
-        self._stud_cache[key] = ""
-        return ""
+    @staticmethod
+    def _resolve_candidates(cands, single_status="stem"):
+        if len(cands) == 1:
+            return cands[0], single_status
+        if not cands:
+            return "", "missing"
+        return "", "AMBIGUOUS: " + " | ".join(os.path.basename(c) for c in cands)
 
     def _strip_stud_suffix(self, name: str) -> str:
         base = os.path.splitext(os.path.basename(name))[0]
@@ -553,7 +582,7 @@ class BatchWorker(QThread):
             # remember last resolved student path to support blank Output
             last_stud_path = None
 
-            for rule in self.rules:
+            for ri, rule in enumerate(self.rules, 1):
                 output = (rule.get("output") or "").strip()
                 metric = (rule.get("metric") or "").strip()
                 max_score = rule.get("max_score", 1.0)
@@ -561,6 +590,9 @@ class BatchWorker(QThread):
                 mode = rule.get("mode", "bucket") or "bucket"
                 notes = rule.get("notes", "") or ""
                 aggregation = rule.get("aggregation", "mean") or "mean"
+                # Columns are keyed per rule so two rules with the same metric
+                # (e.g. two N_DIFF_PIXELS rules on different ROIs) do not overwrite each other.
+                rk = f"R{ri}_{metric}"
 
                 if output.lower() == "cout":
                     txt = read_console_text(base, notes)
@@ -569,8 +601,8 @@ class BatchWorker(QThread):
                     comp_mode = (metric or "exact").lower()
                     val = console_compare(txt, expected_text, comp_mode)
                     score = float(max_score) * (1.0 if val >= 1.0 else 0.0)
-                    rowres[f"{metric}_val"] = val
-                    rowres[f"{metric}_score"] = score
+                    rowres[f"{rk}_val"] = val
+                    rowres[f"{rk}_score"] = score
                     total_score += score
                     step_done += 1
                     self.progress.emit(int(step_done * 100 / steps), student_label)
@@ -578,28 +610,35 @@ class BatchWorker(QThread):
 
                 mask_path_notes = extract_mask_from_notes(notes)
                 mask_path_to_use = mask_path_notes if mask_path_notes else self.mask_path
-                rowres["mask"] = mask_path_to_use or ""
+                rowres[f"{rk}_mask"] = mask_path_to_use or ""
 
                 # student file: use specified output; if blank, reuse last
-                stud_path = self._find_student_file(base, output) if output else (last_stud_path or "")
+                if output:
+                    stud_path, stud_status = self._find_student_file(base, output)
+                else:
+                    stud_path, stud_status = (last_stud_path or ""), "reused"
                 if stud_path:
                     last_stud_path = stud_path
+                rowres[f"{rk}_student_path"] = stud_path or stud_status
 
                 # expected image
                 exp_img = None
+                expected_path, exp_status = "", "missing"
                 if explicit_expected is not None:
                     exp_img = explicit_expected
+                    expected_path, exp_status = self.expected_image_path, "explicit"
                 else:
-                    expected_path = ""
                     if (output or stud_path) and self.expected_dir:
                         probe_name = output or os.path.basename(stud_path)
                         expected_path = map_expected_from_student(probe_name, self.expected_dir)
+                        if expected_path:
+                            exp_status = "exact"
                     if not expected_path and self.expected_dir and (output or stud_path):
                         probe = output or (os.path.basename(stud_path) if stud_path else "")
-                        stripped = self._strip_stud_suffix(probe)
-                        expected_path = self._find_in_expected(stripped) or self._find_in_expected(probe)
+                        expected_path, exp_status = self._find_in_expected(probe)
                     if expected_path:
                         exp_img = cv2.imread(expected_path)
+                rowres[f"{rk}_expected_path"] = expected_path or exp_status
 
                 # SIZE fallback: accept WxH from notes/tols if no expected image
                 if exp_img is None and metric == "SIZE":
@@ -608,21 +647,32 @@ class BatchWorker(QThread):
                         exp_img = np.zeros((eh, ew, 3), dtype=np.uint8)
 
                 if exp_img is None:
-                    rowres[f"{metric}_val"] = "MISSING expected"
-                    rowres[f"{metric}_score"] = 0.0
+                    rowres[f"{rk}_val"] = ("AMBIGUOUS expected" if exp_status.startswith("AMBIGUOUS")
+                                           else "MISSING expected")
+                    rowres[f"{rk}_score"] = 0.0
                     step_done += 1
                     self.progress.emit(int(step_done * 100 / steps), student_label)
                     continue
 
                 stud_img = cv2.imread(stud_path) if stud_path else None
                 if stud_img is None:
-                    rowres[f"{metric}_val"] = "MISSING student"
-                    rowres[f"{metric}_score"] = 0.0
+                    rowres[f"{rk}_val"] = ("AMBIGUOUS student" if stud_status.startswith("AMBIGUOUS")
+                                           else "MISSING student")
+                    rowres[f"{rk}_score"] = 0.0
                     step_done += 1
                     self.progress.emit(int(step_done * 100 / steps), student_label)
                     continue
 
-                if mask_path_to_use and os.path.exists(mask_path_to_use):
+                # Resize the student image to the expected resolution (INTER_AREA)
+                # before masking, so a mask never meets two different sizes.
+                # SIZE keeps the original dimensions. The resized flag is reported.
+                resized = metric != "SIZE" and stud_img.shape[:2] != exp_img.shape[:2]
+                if resized:
+                    stud_img = cv2.resize(stud_img, (exp_img.shape[1], exp_img.shape[0]),
+                                          interpolation=cv2.INTER_AREA)
+                rowres[f"{rk}_resized"] = int(resized)
+
+                if mask_path_to_use and os.path.exists(mask_path_to_use) and metric != "SIZE":
                     mask = cv2.imread(mask_path_to_use, cv2.IMREAD_GRAYSCALE)
                     if mask is not None:
                         mask = (mask > 127).astype(np.uint8)
@@ -638,32 +688,34 @@ class BatchWorker(QThread):
                     exp_use, stud_use = exp_img, stud_img
 
                 func = METRICS.get(metric)
+                err = None
                 try:
-                    if metric in {"Objects", "Holes"}:
-                        val = float(func(stud_use, None))
-                    elif metric in {"Contours", "ContoursStrict"}:
-                        val = float(func(exp_use, stud_use))
-                    elif metric == "ΔE" and aggregation:
-                        val = aggregate_map(metric_deltaE_map(exp_use, stud_use), aggregation)
-                    elif metric == "MAE" and aggregation:
-                        val = aggregate_map(metric_mae_map(exp_use, stud_use), aggregation)
-                    elif metric == "MSE" and aggregation:
-                        val = aggregate_map(metric_mse_map(exp_use, stud_use), aggregation)
+                    if func is None:
+                        raise KeyError(f"unknown metric '{metric}'")
+                    if metric in {"ΔE", "MAE", "MSE"} and aggregation:
+                        map_fn = {"ΔE": metric_deltaE_map, "MAE": metric_mae_map,
+                                  "MSE": metric_mse_map}[metric]
+                        val = float(aggregate_map(map_fn(exp_use, stud_use), aggregation))
                     elif metric == "N_DIFF_PIXELS":
                         thr, logic, use_gray, tol_clean = parse_ndiff_params(tols, notes)
                         val = float(metric_n_diff_pixels(exp_use, stud_use, thr=thr,
                                                          logic=logic, use_gray=use_gray))
                         tols = tol_clean
                     else:
-                        val = float(func(exp_use, stud_use)) if func else 0.0
-                except Exception:
-                    val = 0.0
+                        val = float(func(exp_use, stud_use))
+                    # PSNR is +inf for identical images (a perfect result); any
+                    # other NaN/inf is an error, never a silent "perfect" 0.0.
+                    if math.isnan(val) or (math.isinf(val) and metric != "PSNR"):
+                        raise ValueError("non-finite metric value")
+                except Exception as e:
+                    err = f"ERROR: {type(e).__name__}: {e}"
 
-                try:
-                    if math.isnan(val) or math.isinf(val):
-                        val = 0.0
-                except Exception:
-                    val = 0.0
+                if err is not None:
+                    rowres[f"{rk}_val"] = err
+                    rowres[f"{rk}_score"] = 0.0
+                    step_done += 1
+                    self.progress.emit(int(step_done * 100 / steps), student_label)
+                    continue
 
                 score = compute_score(metric, val, max_score, tols, mode)
                 try:
@@ -672,8 +724,8 @@ class BatchWorker(QThread):
                 except Exception:
                     score = 0.0
 
-                rowres[f"{metric}_val"] = val
-                rowres[f"{metric}_score"] = score
+                rowres[f"{rk}_val"] = val
+                rowres[f"{rk}_score"] = score
                 total_score += float(score)
 
                 step_done += 1
@@ -905,7 +957,9 @@ class ImageGraderApp(QMainWindow):
 
             A=exp.copy() if exp is not None else None; B=stud.copy() if stud is not None else None
             if A is None or B is None: self.table.setItem(row,7,QTableWidgetItem("No images loaded")); continue
-            if mask is not None:
+            if metric != "SIZE" and B.shape[:2] != A.shape[:2]:
+                B = cv2.resize(B, (A.shape[1], A.shape[0]), interpolation=cv2.INTER_AREA)
+            if mask is not None and metric != "SIZE":
                 if A.shape[:2]!=mask.shape: mres=cv2.resize(mask,(A.shape[1],A.shape[0]),interpolation=cv2.INTER_NEAREST)
                 else: mres=mask
                 A=A*mres[:,:,None]; B=B*mres[:,:,None]
@@ -913,8 +967,7 @@ class ImageGraderApp(QMainWindow):
             if func is None: val=float('nan')
             else:
                 try:
-                    if metric in {"Objects","Holes"}: val=float(func(B,None))
-                    elif metric in {"Contours","ContoursStrict"}: val=float(func(A,B))
+                    if metric in {"Contours","ContoursStrict"}: val=float(func(A,B))
                     elif metric=="ΔE" and agg: val=float(aggregate_map(metric_deltaE_map(A,B), agg))
                     elif metric=="MAE" and agg: val=float(aggregate_map(metric_mae_map(A,B), agg))
                     elif metric=="MSE" and agg: val=float(aggregate_map(metric_mse_map(A,B), agg))
@@ -962,7 +1015,9 @@ class ImageGraderApp(QMainWindow):
         try: self.progress.setValue(100); self.progress.close()
         except: pass
         if results:
-            keys=set(); [keys.update(r.keys()) for r in results]; keys=["student"]+[k for k in sorted(keys) if k!="student"]
+            # Keep columns in rule order (R1..Rn), total_score last.
+            keys=list(dict.fromkeys(k for r in results for k in r.keys()))
+            keys=["student"]+[k for k in keys if k not in ("student","total_score")]+["total_score"]
             try:
                 with open(save_path,"w",newline="",encoding="utf-8") as f:
                     w=csv.DictWriter(f, fieldnames=keys); w.writeheader(); [w.writerow(r) for r in results]
