@@ -132,8 +132,11 @@ def metric_n_diff_pixels(a, b, thr=1, logic='any', use_gray=False):
         return float(mask.sum())
 
 def _holes_signature(gray):
+    # Holes per object. RETR_CCOMP puts every object at the top level, including
+    # objects that lie inside a hole of another object (RETR_TREE nested them
+    # under the hole, so they were left out of the signature).
     _, th = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
-    cnts, hier = cv2.findContours(th, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    cnts, hier = cv2.findContours(th, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
     if hier is None: return []
     hier = hier[0]
     holes_per_outer = []
@@ -198,16 +201,28 @@ def read_console_text(student_dir, rule_notes):
         with open(p, "r", encoding="utf-8") as f:
             return f.read()
     except Exception:
-        return ""
+        return None          # missing/unreadable: reported by the caller, never a silent 0
 
 def console_compare(text, expected_text, mode="exact"):
     t = text.strip(); e = expected_text.strip()
     if mode == "exact": return 1.0 if t==e else 0.0
     if mode == "contains": return 1.0 if e in t else 0.0
     if mode == "regex":
-        try: return 1.0 if re.search(e,t) else 0.0
-        except Exception: return 0.0
-    return 0.0
+        return 1.0 if re.search(e,t) else 0.0      # an invalid pattern raises re.error
+    raise ValueError(f"unknown console mode '{mode}' (use exact, contains or regex)")
+
+def console_rule(student_dir, metric, tols, notes):
+    """Evaluate a cout rule. Returns (value, error); error is a message or None."""
+    txt = read_console_text(student_dir, notes)
+    if txt is None:
+        fname = parse_notes_kv(notes).get("file", "stdout.txt") if notes else "stdout.txt"
+        return None, f"MISSING {fname}"
+    try:
+        return console_compare(txt, expected_cout_text(tols, notes), (metric or "exact").lower()), None
+    except re.error as e:
+        return None, f"ERROR: invalid regex: {e}"
+    except Exception as e:
+        return None, f"ERROR: {e}"
 
 def parse_notes_kv(notes):
     """key=value pairs separated by ',' or ';'. A value may be double-quoted
@@ -289,12 +304,21 @@ FRIENDLY_METRICS = {
 }
 
 def compute_score(metric_name, value, max_score, tol_str, mode="bucket"):
+    """Map a metric value to points. Raises ValueError if the tolerances are
+    missing or cannot be read, so a rule without valid thresholds never awards
+    points silently. EXACT without tolerances is pass/fail. The score always
+    lies in [0, max_score]."""
     try: max_score = float(max_score)
     except: max_score = 1.0
-    try: tols = [float(t.strip()) for t in tol_str.split(",") if t.strip()]
-    except: tols = []
+    parts = [t.strip() for t in (tol_str or "").split(",") if t.strip() not in ("", "-", "\u2013", "\u2014")]
+    try: tols = [float(t) for t in parts]
+    except ValueError:
+        raise ValueError(f"invalid tolerances '{tol_str}'")
     higher = metric_name in {"PSNR","SSIM","NCC","IoU","Contours","ContoursStrict","EXACT"}
-    if not tols: return float(max_score)
+    if not tols:
+        if metric_name == "EXACT":
+            return max_score if value >= 1.0 else 0.0
+        raise ValueError("no tolerances set")
     if higher:
         tols = sorted(tols, reverse=True)
         if mode=="bucket":
@@ -303,7 +327,7 @@ def compute_score(metric_name, value, max_score, tol_str, mode="bucket"):
             return 0.0
         top = tols[0]
         if top==0: return 0.0
-        return max_score*min(value/top,1.0)
+        return max_score*max(0.0, min(value/top,1.0))
     else:
         tols = sorted(tols)
         if mode=="bucket":
@@ -808,12 +832,9 @@ class BatchWorker(QThread):
                 rk = f"R{ri}_{metric}"
 
                 if output.lower() == "cout":
-                    txt = read_console_text(base, notes)
-                    expected_text = expected_cout_text(tols, notes)
-                    comp_mode = (metric or "exact").lower()
-                    val = console_compare(txt, expected_text, comp_mode)
-                    score = float(max_score) * (1.0 if val >= 1.0 else 0.0)
-                    rowres[f"{rk}_val"] = val
+                    val, cerr = console_rule(base, metric, tols, notes)
+                    score = 0.0 if cerr else float(max_score) * (1.0 if val >= 1.0 else 0.0)
+                    rowres[f"{rk}_val"] = cerr or val
                     rowres[f"{rk}_score"] = score
                     total_score += score
                     step_done += 1
@@ -862,6 +883,7 @@ class BatchWorker(QThread):
 
                 if exp_img is None:
                     rowres[f"{rk}_val"] = ("AMBIGUOUS expected" if exp_status.startswith("AMBIGUOUS")
+                                           else "UNREADABLE expected" if expected_path and os.path.exists(expected_path)
                                            else "MISSING expected")
                     rowres[f"{rk}_score"] = 0.0
                     step_done += 1
@@ -871,6 +893,7 @@ class BatchWorker(QThread):
                 stud_img = cv2.imread(stud_path) if stud_path else None
                 if stud_img is None:
                     rowres[f"{rk}_val"] = ("AMBIGUOUS student" if stud_status.startswith("AMBIGUOUS")
+                                           else "UNREADABLE student" if stud_path and os.path.exists(stud_path)
                                            else "MISSING student")
                     rowres[f"{rk}_score"] = 0.0
                     step_done += 1
@@ -910,7 +933,14 @@ class BatchWorker(QThread):
                     self.progress.emit(int(step_done * 100 / steps), student_label)
                     continue
 
-                score = compute_score(metric, val, max_score, tols, mode)
+                try:
+                    score = compute_score(metric, val, max_score, tols, mode)
+                except ValueError as e:
+                    rowres[f"{rk}_val"] = f"ERROR: {e}"
+                    rowres[f"{rk}_score"] = 0.0
+                    step_done += 1
+                    self.progress.emit(int(step_done * 100 / steps), student_label)
+                    continue
                 try:
                     if math.isnan(score) or math.isinf(score):
                         score = 0.0
@@ -1133,9 +1163,10 @@ class ImageGraderApp(QMainWindow):
                 else:
                     base_dir=""
                 if not base_dir: self.table.setItem(row,7,QTableWidgetItem("No student dir/image for cout")); continue
-                txt=read_console_text(base_dir, notes)
-                exp_txt = expected_cout_text(tol, notes)
-                val = console_compare(txt, exp_txt, metric.lower() if metric else "exact")
+                val, cerr = console_rule(base_dir, metric, tol, notes)
+                if cerr:
+                    self.table.setItem(row,7,QTableWidgetItem(cerr)); res.append(f"COUT ({metric}) [{os.path.basename(base_dir)}]: {cerr}")
+                    continue
                 score = max_score * (1.0 if val>=1.0 else 0.0)
                 self.table.setItem(row,7,QTableWidgetItem(f"cout: {val:.1f} | score {score:.2f}"))
                 res.append(f"COUT ({metric}) [{os.path.basename(base_dir)}]: {val:.1f} -> {score:.2f}")
@@ -1161,7 +1192,12 @@ class ImageGraderApp(QMainWindow):
                 msg = f"ERROR: {type(e).__name__}: {e}"
                 self.table.setItem(row,7,QTableWidgetItem(msg)); res.append(f"{metric}: {msg}")
                 continue
-            score=compute_score(metric, val, max_score, tol, mode)
+            try:
+                score=compute_score(metric, val, max_score, tol, mode)
+            except ValueError as e:
+                msg = f"Value {val:.4f} | ERROR: {e}"
+                self.table.setItem(row,7,QTableWidgetItem(msg)); res.append(f"{metric}: {msg}")
+                continue
             self.table.setItem(row,7,QTableWidgetItem(f"Value {val:.4f} | Score {score:.2f}"))
             res.append(f"{metric}: {val:.4f} -> {score:.2f}")
         QMessageBox.information(self,"Single Evaluation Results","\n".join(res))

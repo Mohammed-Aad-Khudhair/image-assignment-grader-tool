@@ -149,3 +149,36 @@ def test_reference_and_plain_file_both_present_is_ambiguous(tmp_path):
     rule = {"output": "img_stud.png", "metric": "IoU", "max_score": 1, "tolerances": "0.9", "mode": "bucket"}
     row = run_batch(str(tmp_path / "students"), [rule], expected_dir=str(E))["s1"]
     assert row["R1_IoU_val"] == "AMBIGUOUS expected" and row["R1_IoU_score"] == 0.0
+
+
+def test_scanned_exact_rule_does_not_reward_wrong_image(course):
+    """Regression: EXACT rule with empty tolerance gave full points to any image."""
+    rule = {"output": "img1_stud.png", "metric": "EXACT", "max_score": 1, "tolerances": "", "mode": "bucket"}
+    res = run_batch(str(course / "students"), [rule], expected_dir=str(course / "expected"))
+    assert res["s_ok"]["R1_EXACT_score"] == 1.0
+    assert res["s_left"]["R1_EXACT_score"] == 0.0
+
+
+def test_rule_without_tolerances_is_reported(course):
+    rule = {"output": "img1_stud.png", "metric": "MSE", "max_score": 1, "tolerances": "", "mode": "bucket"}
+    row = run_batch(str(course / "students"), [rule], expected_dir=str(course / "expected"))["s_left"]
+    assert str(row["R1_MSE_val"]).startswith("ERROR") and row["R1_MSE_score"] == 0.0
+
+
+def test_unreadable_student_file_is_reported(tmp_path):
+    E = tmp_path / "expected"; S = tmp_path / "students" / "s1"; E.mkdir(); S.mkdir(parents=True)
+    cv2.imwrite(str(E / "img.png"), disk()); (S / "img_stud.png").write_text("not an image")
+    rule = {"output": "img_stud.png", "metric": "IoU", "max_score": 1, "tolerances": "0.9", "mode": "bucket"}
+    row = run_batch(str(tmp_path / "students"), [rule], expected_dir=str(E))["s1"]
+    assert row["R1_IoU_val"] == "UNREADABLE student" and row["R1_IoU_score"] == 0.0
+
+
+def test_console_missing_file_and_invalid_regex_are_reported(tmp_path):
+    d = tmp_path / "students"; (d / "s1").mkdir(parents=True); (d / "s2").mkdir()
+    (d / "s1" / "stdout.txt").write_text("algo=cleanup\n")
+    rules = [{"output": "cout", "metric": "contains", "max_score": 1, "tolerances": "cleanup", "mode": "bucket", "notes": ""},
+             {"output": "cout", "metric": "regex", "max_score": 1, "tolerances": "algo=(", "mode": "bucket", "notes": ""}]
+    res = run_batch(str(d), rules)
+    assert res["s1"]["R1_contains_score"] == 1.0
+    assert res["s2"]["R1_contains_val"] == "MISSING stdout.txt" and res["s2"]["R1_contains_score"] == 0.0
+    assert str(res["s1"]["R2_regex_val"]).startswith("ERROR: invalid regex") and res["s1"]["R2_regex_score"] == 0.0

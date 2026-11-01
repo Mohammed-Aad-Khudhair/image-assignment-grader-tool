@@ -1,6 +1,7 @@
 """Metric definitions, ROI handling and scoring."""
 import math
 
+import cv2
 import numpy as np
 import pytest
 
@@ -92,3 +93,32 @@ def test_continuous_scoring(g):
 
 def test_psnr_infinite_scores_full_points(g):
     assert g.compute_score("PSNR", float("inf"), 3, "30,25", "bucket") == 3
+
+
+def test_empty_or_invalid_tolerances_never_award_points(g):
+    """Regression: an empty or unreadable tolerance used to give full points."""
+    with pytest.raises(ValueError):
+        g.compute_score("MSE", 1e6, 2, "", "bucket")
+    with pytest.raises(ValueError):
+        g.compute_score("IoU", 0.1, 5, "0.9;0.8", "bucket")
+
+
+def test_exact_without_tolerance_is_pass_fail(g):
+    """EXACT rules created by 'Scan Assignment Folder' have no tolerance."""
+    assert g.compute_score("EXACT", 1.0, 1, "", "bucket") == 1.0
+    assert g.compute_score("EXACT", 0.0, 1, "", "bucket") == 0.0
+    assert g.compute_score("EXACT", 0.0, 1, "—", "bucket") == 0.0   # App-Guide writes "—"
+
+
+def test_continuous_score_never_negative(g):
+    assert g.compute_score("NCC", -0.5, 2, "0.95", "continuous") == 0.0
+    assert g.compute_score("SSIM", -0.2, 2, "0.9", "continuous") == 0.0
+
+
+def test_contours_strict_counts_objects_inside_holes(g):
+    """Regression: an object lying inside another object's hole was ignored."""
+    ring_with_island = disk(r=40, hole=25)
+    cv2.circle(ring_with_island, (50, 50), 8, (255, 255, 255), -1)      # island inside the hole
+    ring_only = disk(r=40, hole=25)
+    assert g._holes_signature(cv2.cvtColor(ring_with_island, cv2.COLOR_BGR2GRAY)) == [0, 1]
+    assert g.metric_contours_strict(ring_with_island, ring_only) == 0.5
