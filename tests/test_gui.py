@@ -87,3 +87,25 @@ def test_example_rule_files_are_valid(g):
     for name in ("isic_lesion_rules.json", "hrf_H01_rules.json", "hrf_G12_rules.json", "hrf_DR07_rules.json"):
         rules = json.load(open(os.path.join(root, "rules", name), encoding="utf-8"))
         assert rules and all(r["metric"] in g.METRICS for r in rules)
+
+def test_batch_csv_columns_follow_rule_order(g, qapp, tmp_path, monkeypatch):
+    """With 11 rules an alphabetical sort would put R10/R11 before R2.
+    The columns must come out as R1, R2, ..., R11, then total_score."""
+    exp = tmp_path / "expected"; stu = tmp_path / "students" / "s1"
+    exp.mkdir(); stu.mkdir(parents=True)
+    cv2.imwrite(str(exp / "out.png"), disk()); cv2.imwrite(str(stu / "out.png"), disk(r=29))
+    rules = [{"output": "out.png", "metric": "MSE", "max_score": 1.0, "tolerances": "1,10",
+              "mode": "bucket", "aggregation": "mean", "notes": ""} for _ in range(11)]
+    w = g.BatchWorker(str(tmp_path / "students"), str(exp), "", rules, None, "")
+    got = {}
+    w.finished.connect(lambda res: got.setdefault("res", res))   # through the Qt signal, as in the GUI
+    w.run()
+    monkeypatch.setattr(g.QMessageBox, "information", staticmethod(lambda *a, **k: None))
+    win = g.ImageGraderApp(); win.progress = None
+    out = tmp_path / "batch.csv"
+    win.on_batch_finished(got["res"], str(out))
+    header = out.read_text(encoding="utf-8").splitlines()[0].split(",")
+    rule_ids = [int(c.split("_")[0][1:]) for c in header[1:-1]]
+    assert header[0] == "student" and header[-1] == "total_score"
+    assert rule_ids == sorted(rule_ids) and rule_ids[0] == 1 and rule_ids[-1] == 11
+
