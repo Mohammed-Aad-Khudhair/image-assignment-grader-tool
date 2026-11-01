@@ -17,6 +17,25 @@ from collections import Counter
 
 IMG_EXTS = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
 
+def imread(path, flags=cv2.IMREAD_COLOR):
+    """cv2.imread that also works with non-ASCII paths on Windows (e.g. accented
+    student names): the file is read by Python and decoded from memory, as
+    recommended by OpenCV (opencv/opencv#4292). Returns None if unreadable."""
+    try:
+        data = np.fromfile(path, dtype=np.uint8)
+    except (OSError, ValueError):
+        return None
+    if data.size == 0:
+        return None
+    return cv2.imdecode(data, flags)
+
+def imwrite(path, img):
+    """cv2.imwrite counterpart of imread() for non-ASCII paths."""
+    ok, buf = cv2.imencode(os.path.splitext(path)[1] or ".png", img)
+    if ok:
+        buf.tofile(path)
+    return ok
+
 # ---------- Metrics ----------
 def _ensure_same_size(a, b):
     if a.shape[:2] != b.shape[:2]:
@@ -599,7 +618,7 @@ def resolve_path(path, base_dir=""):
 def load_roi(mask_path, shape_hw):
     """Load a binary ROI mask (white = included) at the given (h, w).
     Raises if the file cannot be read, so a rule never runs silently unmasked."""
-    m = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+    m = imread(mask_path, cv2.IMREAD_GRAYSCALE)
     if m is None:
         raise FileNotFoundError(f"cannot read mask {mask_path}")
     if m.shape[:2] != tuple(shape_hw):
@@ -615,7 +634,7 @@ class RectRoiDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Draw ROI (drag to draw a rectangle)")
         self.image_path = image_path
-        self.img = cv2.imread(image_path)
+        self.img = imread(image_path)
         if self.img is None:
             raise RuntimeError("Failed to load image for ROI drawing.")
         self.img_rgb = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
@@ -698,7 +717,7 @@ class RectRoiDialog(QDialog):
         path, _ = QFileDialog.getSaveFileName(self, "Save ROI mask", default, "PNG (*.png)")
         if not path:
             return None
-        cv2.imwrite(path, mask)
+        imwrite(path, mask)
         return path
 
 # ------------------ Worker ------------------
@@ -803,7 +822,7 @@ class BatchWorker(QThread):
         if not subs:
             subs = [""]
 
-        explicit_expected = cv2.imread(self.expected_image_path) if self.expected_image_path else None
+        explicit_expected = imread(self.expected_image_path) if self.expected_image_path else None
 
         results = []
         steps = max(1, len(subs) * max(1, len(self.rules)))
@@ -872,7 +891,7 @@ class BatchWorker(QThread):
                         probe = output or (os.path.basename(stud_path) if stud_path else "")
                         expected_path, exp_status = self._find_in_expected(probe)
                     if expected_path:
-                        exp_img = cv2.imread(expected_path)
+                        exp_img = imread(expected_path)
                 rowres[f"{rk}_expected_path"] = expected_path or exp_status
 
                 # SIZE fallback: accept WxH from notes/tols if no expected image
@@ -890,7 +909,7 @@ class BatchWorker(QThread):
                     self.progress.emit(int(step_done * 100 / steps), student_label)
                     continue
 
-                stud_img = cv2.imread(stud_path) if stud_path else None
+                stud_img = imread(stud_path) if stud_path else None
                 if stud_img is None:
                     rowres[f"{rk}_val"] = ("AMBIGUOUS student" if stud_status.startswith("AMBIGUOUS")
                                            else "UNREADABLE student" if stud_path and os.path.exists(stud_path)
@@ -1020,11 +1039,11 @@ class ImageGraderApp(QMainWindow):
             self.lbl_student.setPixmap(QPixmap()); self.lbl_student.setText("Student")
 
     def _show_image(self, path, label, max_size=420, with_mask=False):
-        img=cv2.imread(path)
+        img=imread(path)
         if img is None:
             label.setText("Failed to load"); return None
         if with_mask and self.mask_path and os.path.exists(self.mask_path):
-            m = cv2.imread(self.mask_path, cv2.IMREAD_GRAYSCALE)
+            m = imread(self.mask_path, cv2.IMREAD_GRAYSCALE)
             if m is not None:
                 rgb = overlay_mask_on_image(img, m)
                 if rgb is not None:
@@ -1139,7 +1158,7 @@ class ImageGraderApp(QMainWindow):
         if not has_cout:
             if not self.expected_image_path or not self.student_image_path:
                 QMessageBox.warning(self,"Missing","Load both expected and student image to run single evaluation."); return
-            exp=cv2.imread(self.expected_image_path); stud=cv2.imread(self.student_image_path)
+            exp=imread(self.expected_image_path); stud=imread(self.student_image_path)
             if exp is None or stud is None: QMessageBox.warning(self,"Error","Failed to load images."); return
 
         res=[]
