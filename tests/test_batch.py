@@ -182,3 +182,13 @@ def test_console_missing_file_and_invalid_regex_are_reported(tmp_path):
     assert res["s1"]["R1_contains_score"] == 1.0
     assert res["s2"]["R1_contains_val"] == "MISSING stdout.txt" and res["s2"]["R1_contains_score"] == 0.0
     assert str(res["s1"]["R2_regex_val"]).startswith("ERROR: invalid regex") and res["s1"]["R2_regex_score"] == 0.0
+
+
+def test_accented_student_folder_names(tmp_path, g):
+    """Hungarian names (e.g. Kovács Ődön). Files are read via np.fromfile +
+    cv2.imdecode, which also works with non-ASCII paths on Windows."""
+    E = tmp_path / "expected"; S = tmp_path / "students" / "Kovács Ődön"; E.mkdir(); S.mkdir(parents=True)
+    assert g.imwrite(str(E / "img.png"), disk()) and g.imwrite(str(S / "img_stud.png"), disk())
+    rule = {"output": "img_stud.png", "metric": "IoU", "max_score": 1, "tolerances": "0.9", "mode": "bucket"}
+    row = run_batch(str(tmp_path / "students"), [rule], expected_dir=str(E))["Kovács Ődön"]
+    assert row["R1_IoU_val"] == 1.0 and row["R1_IoU_score"] == 1.0
