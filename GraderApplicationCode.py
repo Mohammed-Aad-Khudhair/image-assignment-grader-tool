@@ -723,7 +723,9 @@ class RectRoiDialog(QDialog):
 # ------------------ Worker ------------------
 class BatchWorker(QThread):
     progress = Signal(int, str)
-    finished = Signal(list)
+    # object, not list: Qt converts a list of dicts to QVariantMaps, which sorts
+    # the keys alphabetically and would lose the R1..Rn column order of the CSV.
+    finished = Signal(object)
 
     def __init__(self, student_dir, expected_dir, expected_image_path, rules, mask_path=None, rules_base_dir=""):
         super().__init__()
