@@ -20,7 +20,7 @@ Limit grading to a region.
 •	Clear Images
 Clears both previews.
 •	Reset All
-Clears previews, the rules table, ROI/mask, and directory paths.
+Clears previews, the rules table, the rules text box, ROI/mask, and directory paths.
 Rules table (center)
 One row per rule with columns:
 •	Output (student filename) — the expected student output filename (e.g., mask_stud.png) or cout for console text.
@@ -40,7 +40,7 @@ Bottom bar
 •	Rules text (JSON list) — editable JSON view of all rules.
 • Refresh Text from Table → dump the table to JSON.
 • Apply Text to Table → parse JSON and rebuild the table.
-•	Scan Assignment Folder — drafts rules by scanning code/files for *_stud.* images and console usage. It’s a starting point; edit as needed.
+•	Scan Assignment Folder — drafts rules by scanning code/files for *_stud.* images and console usage. It’s a starting point; edit as needed. Drafted cout rules have no expected text: type it into Tolerance(s) before grading.
 Quick workflows
 
 Single Evaluation (one pair)
@@ -248,5 +248,6 @@ ________________________________________
 •	“No images loaded” → load both Expected & Student images before Single Eval.
 •	“No student dir/image for cout” → set Student Dir and pick a Current Student.
 •	cout exact fails → paste the exact expected text (including newlines) into Tolerance(s); set file=… if needed.
+•	“ERROR: no expected text set” → a cout rule has an empty Tolerance(s); type the expected text, snippet or regex there (an empty text would match any output, so it is never scored).
 •	ROI has no effect → draw/load it, then re-run; mask is applied during evaluation.
 •	Batch for multiple tasks → leave the expected image empty and select an Expected Dir that holds all references; or run once per expected image (load expected → Batch → repeat).
