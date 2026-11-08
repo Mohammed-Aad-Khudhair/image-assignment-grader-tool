@@ -1,0 +1,29 @@
+[
+  {
+    "output": "H01_vessels_stud.png",
+    "metric": "IoU",
+    "max_score": 5.0,
+    "tolerances": "0.82,0.90,0.95",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "mask=./expected/H01_fov.png"
+  },
+  {
+    "output": "H01_vessels_stud.png",
+    "metric": "N_DIFF_PIXELS",
+    "max_score": 1.5,
+    "tolerances": "thr:10 | 5000,30000",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "gray=1; mask=./expected/H01_centerline_ring.png"
+  },
+  {
+    "output": "H01_vessels_stud.png",
+    "metric": "N_DIFF_PIXELS",
+    "max_score": 1.5,
+    "tolerances": "thr:10 | 0,5000",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "gray=1; mask=./expected/H01_bg_ring.png"
+  }
+]

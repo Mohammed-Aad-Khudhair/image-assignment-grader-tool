@@ -1,4 +1,4 @@
-ProjectGrader — User Manual (GUI-first)
+ImgGrader — User Manual (GUI-first)
 1) The Interface (GUI / UI)
 Top toolbar
 •	Load Expected Image
@@ -20,7 +20,7 @@ Limit grading to a region.
 •	Clear Images
 Clears both previews.
 •	Reset All
-Clears previews, the rules table, ROI/mask, and directory paths.
+Clears previews, the rules table, the rules text box, ROI/mask, and directory paths.
 Rules table (center)
 One row per rule with columns:
 •	Output (student filename) — the expected student output filename (e.g., mask_stud.png) or cout for console text.
@@ -35,12 +35,12 @@ One row per rule with columns:
 Bottom bar
 •	Add Rule (popup) / Delete Rule — manage rules.
 •	Run Single Eval — evaluates the two loaded preview images (and any cout rules using Current Student).
-•	Batch Evaluate (student dir) — grades all student subfolders using the currently loaded expected image; saves a CSV.
-•	Import Rules (JSON) / Export Rules (JSON/ugly) — load/save your rubric.
+•	Batch Evaluate (student dir) — grades all student subfolders and saves a CSV. If an expected image is loaded, it is the reference for every rule; otherwise each rule's reference is found in the Expected Dir by file name (e.g. mask_stud.png → mask.png, mask_gt.png or mask-reference.png).
+•	Import Rules (JSON) / Export Rules (JSON) — load/save your rubric.
 •	Rules text (JSON list) — editable JSON view of all rules.
 • Refresh Text from Table → dump the table to JSON.
 • Apply Text to Table → parse JSON and rebuild the table.
-•	Scan Assignment Folder — drafts rules by scanning code/files for *_stud.* images and console usage. It’s a starting point; edit as needed.
+•	Scan Assignment Folder — drafts rules by scanning code/files for *_stud.* images and console usage. It’s a starting point; edit as needed. Drafted cout rules have no expected text: type it into Tolerance(s) before grading.
 Quick workflows
 
 Single Evaluation (one pair)
@@ -51,7 +51,7 @@ Single Evaluation (one pair)
 5.	Click Run Single Eval → check the Result column.
 Batch (many students)
 1.	Select Expected Dir and Student Dir.
-2.	Load the expected image for this task.
+2.	(Optional) Load the expected image for this task. Without it, references are matched by file name in the Expected Dir.
 3.	Add/import rules.
 4.	Click Batch Evaluate, pick a CSV path.
 5.	Repeat steps 2–4 for other expected images/tasks.
@@ -114,18 +114,28 @@ Binary/shape
 When: segmentation/thresholding correctness.
 Better: higher.
 Formula: IoU = |A ∩ B| / |A ∪ B|.
-•	Objects — compare number of connected components.
+•	Objects — miscount of connected components (foreground objects).
 When: morphological tasks expecting a count.
-Better: higher if counts match (or score by closeness).
-•	Holes — compare number of holes (components on inverted mask).
+Better: lower (0 = same number of objects as the reference).
+Formula: |objects(A) − objects(B)|.
+•	Holes — miscount of holes (background regions enclosed by foreground; the outer background is not a hole).
 When: shapes with internal voids (rings, donuts).
-Better: higher if counts match (or by closeness).
+Better: lower (0 = same number of holes as the reference).
+Formula: |holes(A) − holes(B)|.
+•	Euler — difference of Euler numbers (objects minus holes).
+When: topology errors, e.g. a spurious hole inside a region, that barely change IoU.
+Better: lower (0 = same topology count).
+Formula: |χ(A) − χ(B)| with χ = objects − holes.
 •	Contours — quick check: contour counts equal?
 When: coarse boundary check.
 Better: higher if counts match (1), else 0.
 •	ContoursStrict — hierarchy-aware shape similarity (holes per object).
 When: stricter boundary/topology comparison.
 Better: higher (0..1).
+•	SIZE — size check: largest difference in width or height, in pixels (the student image is not resized for this rule).
+When: the output must keep the reference resolution.
+Better: lower (0 = same size).
+Formula: max(|wA − wB|, |hA − hB|).
 Pixel-difference counter
 •	N_DIFF_PIXELS — counts pixels whose difference exceeds a per-pixel threshold.
 When: you want to “count mistakes”.
@@ -133,11 +143,11 @@ Better: lower (fewer bad pixels).
 How to write:
 o	Tolerance(s): thr:<τ> | C1,C2,C3...
 e.g., thr:10 | 3000,8000,12000
-• thr:10 → a pixel is “different” if abs-diff > 10 (per channel or gray).
+• thr:10 → a pixel is “different” if abs-diff ≥ 10 (per channel or gray).
 • 3000,8000,12000 → count thresholds for scoring (lower is better).
 o	Notes (optional):
-• logic=any (default): a pixel counts different if any channel > τ.
-• logic=all: counts different only if all channels > τ (stricter).
+• logic=any (default): a pixel counts different if any channel ≥ τ.
+• logic=all: counts different only if all channels ≥ τ (stricter).
 • gray=1: compare in grayscale (ignore color).
 ________________________________________
 4) Aggregation (for per-pixel maps)
@@ -162,7 +172,7 @@ o	≥0.95 → best band
 o	≥0.90 → next
 o	≥0.80 → next
 o	otherwise 0
-•	Lower-is-better (MSE/MAE/RMSE, ΔE, N_DIFF_PIXELS):
+•	Lower-is-better (MSE/MAE/RMSE, ΔE, N_DIFF_PIXELS, Objects, Holes, Euler, SIZE):
 Example 1,2,10,50
 o	≤1 → best band
 o	≤2 → next …
@@ -187,9 +197,10 @@ ________________________________________
 These are commands (not just comments) that alter behavior:
 •	file=stdout.txt — for cout rules: which file to read (default stdout.txt).
 •	logic=any / logic=all — for N_DIFF_PIXELS per-pixel decision:
-• any → a pixel is bad if any channel exceeds τ (looser; default).
-• all → a pixel is bad only if all channels exceed τ (stricter).
+• any → a pixel is bad if any channel is ≥ τ (looser; default).
+• all → a pixel is bad only if all channels are ≥ τ (stricter).
 •	gray=1 — for N_DIFF_PIXELS: compare in grayscale (ignore color).
+•	mask=<file> — this rule uses its own mask (e.g. mask=./expected/H01_fov.png). A relative path is read from the folder of the imported rule file. A missing mask is reported as an error (0 points), never ignored.
 You can leave Notes empty unless you want these behaviors.
 ________________________________________
 8) ROI / Mask
@@ -197,6 +208,7 @@ ________________________________________
 • Yes to draw a rectangle ROI quickly.
 • No to load a binary mask image (white=included).
 •	Only masked pixels contribute to metrics.
+•	A rule with its own mask= note uses that mask instead of the loaded one (Section 7).
 •	The mask is resized to the expected image automatically.
 Why it matters: focus grading on the important region; ignore background/borders
 ________________________________________________________
@@ -236,5 +248,6 @@ ________________________________________
 •	“No images loaded” → load both Expected & Student images before Single Eval.
 •	“No student dir/image for cout” → set Student Dir and pick a Current Student.
 •	cout exact fails → paste the exact expected text (including newlines) into Tolerance(s); set file=… if needed.
+•	“ERROR: no expected text set” → a cout rule has an empty Tolerance(s); type the expected text, snippet or regex there (an empty text would match any output, so it is never scored).
 •	ROI has no effect → draw/load it, then re-run; mask is applied during evaluation.
-•	Batch for multiple tasks → run once per expected image (load expected → Batch → repeat).
+•	Batch for multiple tasks → leave the expected image empty and select an Expected Dir that holds all references; or run once per expected image (load expected → Batch → repeat).
