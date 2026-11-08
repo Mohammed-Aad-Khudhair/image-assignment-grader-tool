@@ -211,3 +211,18 @@ def test_csv_paths_have_one_form_whatever_their_source(tmp_path):
         assert row["R1_MSE_expected_path"] == os.path.normpath(str(E / "img.png"))
         assert row["R1_MSE_student_path"] == os.path.normpath(str(S / "img_stud.png"))
         assert row["R1_MSE_mask"] == os.path.normpath(str(E / "m.png"))
+
+
+@pytest.mark.parametrize("mode", ["exact", "contains", "regex"])
+def test_console_rule_without_expected_text_is_an_error(g, tmp_path, mode):
+    """An empty expected text is contained in every output and an empty regex
+    matches anything; such a rule must give an error and 0 points, not full points."""
+    S = tmp_path / "students" / "s1"; S.mkdir(parents=True)
+    (S / "stdout.txt").write_text("totally wrong output\n", encoding="utf-8")
+    val, err = g.console_rule(str(S), mode, "", "file=stdout.txt")
+    assert val is None and err == "ERROR: no expected text set"
+    rule = {"output": "cout", "metric": mode, "max_score": 1, "tolerances": "", "mode": "bucket",
+            "notes": "file=stdout.txt"}
+    row = run_batch(str(tmp_path / "students"), [rule])["s1"]
+    assert row[f"R1_{mode}_score"] == 0.0 and row["total_score"] == 0.0
+    assert row[f"R1_{mode}_val"] == "ERROR: no expected text set"

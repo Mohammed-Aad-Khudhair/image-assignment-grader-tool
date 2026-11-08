@@ -20,6 +20,7 @@
 - Relative mask paths are read from the folder of the imported rule file; a missing mask is an error instead of an unmasked evaluation.
 - The student image is resized to the reference size (area interpolation) before masking; this fixes a crash on size mismatch with a mask. The `resized` column records it.
 - Console rules: a missing output file or an invalid regular expression is reported instead of a silent 0; expected text containing commas is no longer cut.
+- A console rule without expected text is reported as an error with 0 points. Previously `contains` and `regex` rules with an empty text gave full points for any output (rules drafted by Scan Assignment Folder have no expected text until it is filled in).
 - Images on paths with non-ASCII characters (e.g. accented folder names on Windows) are read and written correctly.
 - The rectangle ROI drawing dialog is restored.
 
@@ -29,9 +30,12 @@
 - New Euler metric: |χ(A) − χ(B)| with χ = objects − holes.
 - CSV audit columns per rule: resolved student and reference paths, mask used, and whether the student image was resized.
 - Window title is "ImgGrader".
+- Reset All also clears the rules text box.
+- Exported rule files store console text once, in `tolerances`; the duplicate `expected_cout` field is no longer written (older files that contain it still load).
+- Removed a deprecated Qt call (`exec_`) that printed a warning when a batch started.
 
 ### Added
-- `tests/`: 53 automated tests (`python -m pytest tests`).
+- `tests/`: 59 automated tests (`python -m pytest tests`).
 - `rules/`: importable rule files for the ISIC lesion and HRF vessel examples (replaces the top-level `rules.json`, which was not valid JSON).
 - `requirements.txt` lists the packages the code imports.
 - `CITATION.cff` and this changelog.
