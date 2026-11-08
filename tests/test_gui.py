@@ -109,3 +109,36 @@ def test_batch_csv_columns_follow_rule_order(g, qapp, tmp_path, monkeypatch):
     assert header[0] == "student" and header[-1] == "total_score"
     assert rule_ids == sorted(rule_ids) and rule_ids[0] == 1 and rule_ids[-1] == 11
 
+
+
+def test_reset_all_clears_the_rules_text_box(g, qapp):
+    win = g.ImageGraderApp()
+    win.rules_text.setPlainText('[{"output": "a.png", "metric": "MSE"}]')
+    win.on_reset_all()
+    assert win.rules_text.toPlainText() == ""
+
+
+def test_exported_rules_have_no_duplicate_expected_cout(g, qapp, tmp_path, monkeypatch):
+    """The console text is stored once, in "tolerances", and survives export -> import."""
+    src = tmp_path / "rules.json"
+    src.write_text(json.dumps([
+        {"output": "cout", "metric": "contains", "max_score": 1, "tolerances": "Area: 1520, Perimeter",
+         "mode": "bucket", "notes": "file=stdout.txt"},
+        {"output": "img_stud.png", "metric": "MSE", "max_score": 2, "tolerances": "1,10", "mode": "bucket"}]),
+        encoding="utf-8")
+    out = tmp_path / "exported.json"
+    monkeypatch.setattr(g.QMessageBox, "information", staticmethod(lambda *a, **k: None))
+    monkeypatch.setattr(g.QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: (str(src), "")))
+    monkeypatch.setattr(g.QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "")))
+    win = g.ImageGraderApp(); win.on_import_json(); win.on_export_rules(); win.on_refresh_rules_text()
+    for rules in (json.loads(out.read_text(encoding="utf-8")), json.loads(win.rules_text.toPlainText())):
+        assert all("expected_cout" not in r for r in rules)
+        assert rules[0]["tolerances"] == "Area: 1520, Perimeter"
+    monkeypatch.setattr(g.QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: (str(out), "")))
+    win2 = g.ImageGraderApp(); win2.on_import_json()
+    assert win2.table.item(0, 3).text() == "Area: 1520, Perimeter"
+
+
+def test_no_deprecated_exec_calls(g):
+    import inspect
+    assert "exec_(" not in inspect.getsource(g)

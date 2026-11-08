@@ -232,6 +232,10 @@ def console_compare(text, expected_text, mode="exact"):
 
 def console_rule(student_dir, metric, tols, notes):
     """Evaluate a cout rule. Returns (value, error); error is a message or None."""
+    # A rule without expected text is a configuration error, never a match:
+    # an empty text is "contained" in every output and an empty regex matches anything.
+    if not expected_cout_text(tols, notes).strip():
+        return None, "ERROR: no expected text set"
     txt = read_console_text(student_dir, notes)
     if txt is None:
         fname = parse_notes_kv(notes).get("file", "stdout.txt") if notes else "stdout.txt"
@@ -1138,6 +1142,7 @@ class ImageGraderApp(QMainWindow):
         self.on_clear_images(); self.expected_dir=""; self.student_dir=""; self.mask_path=""; self.rules_base_dir=""
         self.mask_info.setText("Mask: (none)")
         self.table.setRowCount(0); self.student_picker.clear(); self.student_picker.addItem("(no subfolders)")
+        self.rules_text.clear()
 
     def on_add_rule_popup(self):
         autofill = os.path.basename(self.student_image_path) if self.student_image_path else ""
@@ -1249,7 +1254,7 @@ class ImageGraderApp(QMainWindow):
         self.progress=QProgressDialog("Batch running...","Cancel",0,100,self); self.progress.setWindowModality(Qt.WindowModal); self.progress.setAutoClose(False); self.progress.setValue(0)
         self.worker=BatchWorker(self.student_dir, self.expected_dir, self.expected_image_path or "", rules, self.mask_path or None, self.rules_base_dir)
         self.worker.progress.connect(self.on_worker_progress); self.worker.finished.connect(lambda res: self.on_batch_finished(res, save))
-        self.worker.start(); self.progress.exec_()
+        self.worker.start(); self.progress.exec()
 
     def on_worker_progress(self, percent, fname):
         self.progress.setValue(percent); self.progress.setLabelText(f"Processing: {fname}"); QApplication.processEvents()
@@ -1303,7 +1308,6 @@ class ImageGraderApp(QMainWindow):
                 "mode": self.table.item(row,4).text() if self.table.item(row,4) else "bucket",
                 "aggregation": self.table.item(row,5).text() if self.table.item(row,5) else "mean",
                 "notes": notes,
-                "expected_cout": expected_cout_text(self.table.item(row,3).text() if self.table.item(row,3) else "", notes) if (self.table.item(row,0) and self.table.item(row,0).text().strip().lower()=="cout") else "",
                 "result": self.table.item(row,7).text() if self.table.item(row,7) else ""
             })
         try:
@@ -1325,8 +1329,7 @@ class ImageGraderApp(QMainWindow):
                 "tolerances": tol.text().strip() if tol else "",
                 "mode": mode.text().strip() if mode else "bucket",
                 "aggregation": agg.text().strip() if agg else "mean",
-                "notes": notes_text,
-                "expected_cout": expected_cout_text(tol.text() if tol else "", notes_text) if out.text().strip().lower()=="cout" else ""
+                "notes": notes_text
             })
         self.rules_text.setPlainText(json.dumps(rules, indent=2))
 
