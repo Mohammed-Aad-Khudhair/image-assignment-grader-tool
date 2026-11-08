@@ -192,3 +192,22 @@ def test_accented_student_folder_names(tmp_path, g):
     rule = {"output": "img_stud.png", "metric": "IoU", "max_score": 1, "tolerances": "0.9", "mode": "bucket"}
     row = run_batch(str(tmp_path / "students"), [rule], expected_dir=str(E))["Kovács Ődön"]
     assert row["R1_IoU_val"] == 1.0 and row["R1_IoU_score"] == 1.0
+
+
+def test_csv_paths_have_one_form_whatever_their_source(tmp_path):
+    """The reference path is the same text whether the image was loaded with
+    Load Expected Image (path as the file dialog returns it) or found in the
+    Expected Dir; student and mask paths are normalised the same way."""
+    E = tmp_path / "expected"; S = tmp_path / "students" / "s1"; E.mkdir(); S.mkdir(parents=True)
+    cv2.imwrite(str(E / "img.png"), disk()); cv2.imwrite(str(S / "img_stud.png"), disk())
+    m = np.full((100, 100), 255, np.uint8); cv2.imwrite(str(E / "m.png"), m)
+    rule = {"output": "img_stud.png", "metric": "MSE", "max_score": 1, "tolerances": "1", "mode": "bucket",
+            "notes": "mask=./expected/./m.png"}
+    by_dir = run_batch(str(tmp_path / "students"), [rule], expected_dir=str(E), rules_base_dir=str(tmp_path))["s1"]
+    explicit = run_batch(str(tmp_path / "students") + os.sep + ".", [rule], expected_dir=str(E),
+                         expected_image=str(E) + os.sep + "." + os.sep + "img.png",
+                         rules_base_dir=str(tmp_path))["s1"]
+    for row in (by_dir, explicit):
+        assert row["R1_MSE_expected_path"] == os.path.normpath(str(E / "img.png"))
+        assert row["R1_MSE_student_path"] == os.path.normpath(str(S / "img_stud.png"))
+        assert row["R1_MSE_mask"] == os.path.normpath(str(E / "m.png"))

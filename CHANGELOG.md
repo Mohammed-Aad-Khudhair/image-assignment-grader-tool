@@ -15,6 +15,7 @@
 ### Fixed – files, masks and console output
 - File matching: exact name first, then the same name without student suffixes (`_stud`, `_student`) and reference suffixes (`_gt`, `-reference`, `_ref`, `_expected`). Several candidates are reported as `AMBIGUOUS` with 0 points instead of picking one.
 - Missing, unreadable and ambiguous student or reference files are reported separately in the CSV.
+- File paths in the CSV are written in one normalised form (on Windows always with backslashes), whether they come from a file dialog, a rule file or the Expected Dir lookup.
 - Importing rules no longer turns one rule's mask into a global mask, and loading a global mask no longer overwrites a rule's own `mask=`.
 - Relative mask paths are read from the folder of the imported rule file; a missing mask is an error instead of an unmasked evaluation.
 - The student image is resized to the reference size (area interpolation) before masking; this fixes a crash on size mismatch with a mask. The `resized` column records it.
@@ -30,7 +31,7 @@
 - Window title is "ImgGrader".
 
 ### Added
-- `tests/`: 52 automated tests (`python -m pytest tests`).
+- `tests/`: 53 automated tests (`python -m pytest tests`).
 - `rules/`: importable rule files for the ISIC lesion and HRF vessel examples (replaces the top-level `rules.json`, which was not valid JSON).
 - `requirements.txt` lists the packages the code imports.
 - `CITATION.cff` and this changelog.
