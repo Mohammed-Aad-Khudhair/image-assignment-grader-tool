@@ -601,6 +601,12 @@ def extract_mask_from_notes(notes):
     m = re.search(r"mask\s*=\s*([^,;]+)", notes, re.I)
     return m.group(1).strip() if m else ""
 
+def csv_path(path):
+    """A file path as written to the CSV: one normalised form per platform
+    (on Windows always backslashes), whether the path came from a file dialog,
+    the rule file or the Expected Dir lookup."""
+    return os.path.normpath(path) if path else path
+
 def resolve_path(path, base_dir=""):
     """Resolve a (possibly relative) path from a rule. Relative paths are tried
     against the folder of the imported rule file first, then the working
@@ -866,7 +872,7 @@ class BatchWorker(QThread):
                 # explicitly (never one taken from another rule).
                 mask_spec = extract_mask_from_notes(notes) or (self.mask_path or "")
                 mask_path_to_use = resolve_path(mask_spec, self.rules_base_dir) if mask_spec else ""
-                rowres[f"{rk}_mask"] = mask_path_to_use or (f"MISSING: {mask_spec}" if mask_spec else "")
+                rowres[f"{rk}_mask"] = csv_path(mask_path_to_use) or (f"MISSING: {mask_spec}" if mask_spec else "")
 
                 # student file: use specified output; if blank, reuse last
                 if output:
@@ -875,7 +881,7 @@ class BatchWorker(QThread):
                     stud_path, stud_status = (last_stud_path or ""), "reused"
                 if stud_path:
                     last_stud_path = stud_path
-                rowres[f"{rk}_student_path"] = stud_path or stud_status
+                rowres[f"{rk}_student_path"] = csv_path(stud_path) or stud_status
 
                 # expected image
                 exp_img = None
@@ -894,7 +900,7 @@ class BatchWorker(QThread):
                         expected_path, exp_status = self._find_in_expected(probe)
                     if expected_path:
                         exp_img = imread(expected_path)
-                rowres[f"{rk}_expected_path"] = expected_path or exp_status
+                rowres[f"{rk}_expected_path"] = csv_path(expected_path) or exp_status
 
                 # SIZE fallback: accept WxH from notes/tols if no expected image
                 if exp_img is None and metric == "SIZE":
