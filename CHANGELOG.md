@@ -41,7 +41,7 @@
 - `CITATION.cff` and this changelog.
 
 ### Documentation
-- README, App-Guide and licence file updated to match the program. The licence file now contains the unmodified GPL-3.0 text; the copyright notice is in the README.
+- README, App-Guide, user guide PDF and licence file updated to match the program. The licence file now contains the unmodified GPL-3.0 text; the copyright notice is in the README.
 
 ### Effect on earlier results
 On the ISIC and HRF case studies, all 52 rule scores are identical to the previous version. Four Objects values changed, because Objects is now a miscount against the reference instead of a raw count.
