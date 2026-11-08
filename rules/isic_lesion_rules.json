@@ -1,0 +1,31 @@
+[
+  {
+    "output": "lesion_mask_stud.png",
+    "metric": "IoU",
+    "max_score": 5,
+    "tolerances": "0.995,0.985,0.975",
+    "mode": "bucket"
+  },
+  {
+    "output": "lesion_mask_stud.png",
+    "metric": "N_DIFF_PIXELS",
+    "max_score": 1,
+    "tolerances": "thr:10 | 4000,8000",
+    "mode": "bucket",
+    "notes": "gray=1; mask=./masks/roi_border.png"
+  },
+  {
+    "output": "lesion_mask_stud.png",
+    "metric": "Objects",
+    "max_score": 1,
+    "tolerances": "1",
+    "mode": "bucket"
+  },
+  {
+    "output": "lesion_mask_stud.png",
+    "metric": "ContoursStrict",
+    "max_score": 1,
+    "tolerances": "1,0.9",
+    "mode": "bucket"
+  }
+]
