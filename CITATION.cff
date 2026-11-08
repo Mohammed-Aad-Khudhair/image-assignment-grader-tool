@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+title: "ImgGrader: Automated Grading for Image Processing Tasks"
+abstract: >-
+  ImgGrader is a Python GUI application for rule-based automated grading of
+  image-processing assignments. It compares student output images (and
+  optional console output) with instructor references using configurable
+  metrics, tolerances, scoring modes and region-of-interest masks, and
+  exports auditable CSV reports for whole classes.
+authors:
+  - family-names: Khudhair
+    given-names: Mohammed A.
+    affiliation: University of Debrecen
+version: "1.1"
+license: GPL-3.0-or-later
+repository-code: "https://github.com/Mohammed-Aad-Khudhair/image-assignment-grader-tool"
+keywords:
+  - automated grading
+  - image processing
+  - education
+  - image similarity metrics
+  - PySide6

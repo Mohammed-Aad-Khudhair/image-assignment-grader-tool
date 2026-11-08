@@ -984,7 +984,7 @@ class BatchWorker(QThread):
 class ImageGraderApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Image Assignment Grader (mask overlay + saved refs)")
+        self.setWindowTitle("ImgGrader")
         self.setGeometry(60,60,1400,780)
         self.expected_image_path=""; self.student_image_path=""; self.expected_dir=""; self.student_dir=""; self.mask_path=""
         self.rules_base_dir=""  # folder of the last imported rule file; relative mask paths resolve from here

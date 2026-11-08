@@ -1,6 +1,6 @@
 # ImgGrader: Automated Grading for Image Processing Tasks
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE.txt)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE.TXT)
 
 
 ## Description
@@ -15,17 +15,18 @@ ImgGrader is a Python-based GUI application for automated grading of image-proce
 - **Console output evaluation** – Check text-based results (e.g., numeric outputs, messages) using exact, substring (“contains”), or regular expression matching.
 - **Batch processing and CSV reports** – Evaluate all student submissions in a directory, with detailed CSV output including metrics, per-rule scores, and totals. For auditing, each rule also records the resolved expected and student file paths, the mask used, and whether the student image was resized (`resized`, area interpolation). Missing, ambiguous or failed evaluations are reported in the CSV and receive 0 points.
 - **JSON-based rule import/export** – Save and reuse grading rules as JSON files; share rubrics across cohorts and semesters or version-control them.
-- **Cross-platform & extensible** – Implemented in Python with PySide6, OpenCV, NumPy, and scikit-image; runs on Windows, macOS, and Linux.
+- **Cross-platform & extensible** – Implemented in Python with PySide6, OpenCV, NumPy, and scikit-image; tested on Windows and Linux (the dependencies are also available for macOS, but it has not been tested there).
 
-## User Guide 
+## User Guide
 
-- Check App-Guide 
+- [App-Guide](App-Guide) – detailed reference: every button, metric, tolerance syntax, scoring mode and note keyword
+- [ImgGrader__User_Guide.pdf](ImgGrader__User_Guide.pdf) – illustrated overview with screenshots
 
 ## Installation
 
 ### Prerequisites
 
-- Python **3.8+**
+- Python **3.8 or newer** (the tests pass on Python 3.8, 3.9, 3.12 and 3.13)
 - Git (for cloning the repository)
 - A virtual environment is recommended (e.g., `venv` or `conda`).
 
@@ -67,3 +68,13 @@ Relative mask paths in a rule file (e.g. `mask=./expected/H01_fov.png`) are reso
 pip install pytest
 python -m pytest tests
 ```
+
+## Citation
+
+If you use ImgGrader, please cite it using the metadata in [CITATION.cff](CITATION.cff) (GitHub shows it under "Cite this repository").
+
+## License
+
+Copyright (c) 2025 Mohammed A. Khudhair
+
+ImgGrader is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See [LICENSE.TXT](LICENSE.TXT).
