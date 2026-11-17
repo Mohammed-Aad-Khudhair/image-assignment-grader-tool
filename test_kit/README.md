@@ -43,7 +43,7 @@ Each task folder contains:
    90 of 90 results match the expected results.
    ```
 
-Repeat for the other tasks. Do not use **Load Mask / ROI** or **Load Expected Image** in these runs: masks are set by the rules themselves (T05, T06), and a loaded expected image would be used for every rule.T08 has no reference images: for T08, leave Expected Dir unset.
+Repeat for the other tasks. Do not use **Load Mask / ROI** or **Load Expected Image** in these runs: masks are set by the rules themselves (T05, T06), and a loaded expected image would be used for every rule. T08 has no reference images: for T08, leave Expected Dir unset.
 
 A result matches if the value differs from the correct value by at most 0.1 % (at most 0.001 for values below 1), or the status starts with the expected status (e.g. `MISSING student`), and the score differs by at most 0.2 % of the rule's maximum score.
 
