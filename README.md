@@ -68,6 +68,9 @@ Relative mask paths in a rule file (e.g. `mask=./expected/H01_fov.png`) are reso
 pip install pytest
 python -m pytest tests
 ```
+## Test kit
+
+The `test_kit/` folder contains a synthetic class (9 grading tasks, 69 students, 459 results with known correct answers) for checking that ImgGrader grades correctly. See [test_kit/README.md](test_kit/README.md) for how to run it and compare your results.
 
 ## Citation
 
