@@ -1,0 +1,16 @@
+student,rule,metric,expected_value,expected_status,expected_score,max_score
+perfect,1,ΔE,0,,4,4
+perfect,2,ΔE,0,,2,2
+perfect,3,ΔE,0,,2,2
+red_cast_plus12,1,ΔE,3.92694,,2,4
+red_cast_plus12,2,ΔE,3.92694,,1.215,2
+red_cast_plus12,3,ΔE,9.24741,,0,2
+hue_shift_10deg,1,ΔE,6.31483,,1,4
+hue_shift_10deg,2,ΔE,6.31483,,0.737,2
+hue_shift_10deg,3,ΔE,11.3851,,0,2
+grayscale,1,ΔE,15.874,,0,4
+grayscale,2,ΔE,15.874,,0,2
+grayscale,3,ΔE,25.1989,,0,2
+jpeg_q30,1,ΔE,2.67185,,2,4
+jpeg_q30,2,ΔE,2.67185,,1.466,2
+jpeg_q30,3,ΔE,19.9719,,0,2

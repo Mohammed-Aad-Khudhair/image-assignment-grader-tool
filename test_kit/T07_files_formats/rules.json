@@ -1,0 +1,29 @@
+[
+ {
+  "output": "photo_stud.png",
+  "metric": "MSE",
+  "max_score": 2,
+  "tolerances": "1,50,500",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "photo_stud.png",
+  "metric": "SIZE",
+  "max_score": 1,
+  "tolerances": "0,5,50",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "photo_stud.png",
+  "metric": "EXACT",
+  "max_score": 1,
+  "tolerances": "",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ }
+]

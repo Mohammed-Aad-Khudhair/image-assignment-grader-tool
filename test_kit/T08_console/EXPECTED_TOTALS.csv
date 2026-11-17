@@ -1,0 +1,10 @@
+student,expected_total,max_total
+exact_output,5,8
+extra_spaces_and_newlines,4,8
+windows_line_endings,4,8
+extra_debug_line,2,8
+wrong_area,2,8
+one_line_with_comma,3,8
+hungarian_text,3,8
+empty_output,0,8
+no_output_file,0,8

@@ -1,0 +1,1305 @@
+{
+ "T01_pixel_errors": {
+  "rules": [
+   {
+    "output": "astro_stud.png",
+    "metric": "MSE",
+    "max_score": 4,
+    "tolerances": "1,4,25,100",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "astro_stud.png",
+    "metric": "MAE",
+    "max_score": 4,
+    "tolerances": "1,2,5,10",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "astro_stud.png",
+    "metric": "RMSE",
+    "max_score": 4,
+    "tolerances": "1,2,5,10",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "astro_stud.png",
+    "metric": "PSNR",
+    "max_score": 4,
+    "tolerances": "40,34,28,20",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "astro_stud.png",
+    "metric": "MSE",
+    "max_score": 2,
+    "tolerances": "100",
+    "mode": "continuous",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "astro_stud.png",
+    "metric": "PSNR",
+    "max_score": 2,
+    "tolerances": "48",
+    "mode": "continuous",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "astro_stud.png",
+    "metric": "EXACT",
+    "max_score": 1,
+    "tolerances": "",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "astro_stud.png",
+    "metric": "N_DIFF_PIXELS",
+    "max_score": 3,
+    "tolerances": "thr:10 | 0,50,500",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "logic=any"
+   },
+   {
+    "output": "astro_stud.png",
+    "metric": "N_DIFF_PIXELS",
+    "max_score": 3,
+    "tolerances": "thr:10 | 0,50,500",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "logic=all"
+   },
+   {
+    "output": "astro_stud.png",
+    "metric": "N_DIFF_PIXELS",
+    "max_score": 3,
+    "tolerances": "thr:5 | 0,50,500",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "gray=1"
+   }
+  ],
+  "students": {
+   "perfect": {
+    "designed": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": Infinity,
+     "7": 1,
+     "8": 0,
+     "9": 0
+    },
+    "filenames": [
+     "astro_stud.png"
+    ]
+   },
+   "offset_plus1": {
+    "designed": {
+     "1": 1,
+     "2": 1,
+     "3": 1,
+     "4": 48.1308036086791,
+     "7": 0,
+     "8": 0,
+     "9": 0
+    },
+    "filenames": [
+     "astro_stud.png"
+    ]
+   },
+   "offset_plus2": {
+    "designed": {
+     "1": 4,
+     "2": 2,
+     "3": 2,
+     "4": 42.110203695399484,
+     "7": 0,
+     "8": 0,
+     "9": 0
+    },
+    "filenames": [
+     "astro_stud.png"
+    ]
+   },
+   "offset_plus5": {
+    "designed": {
+     "1": 25,
+     "2": 5,
+     "3": 5,
+     "4": 34.15140352195873,
+     "7": 0,
+     "8": 0,
+     "9": 0
+    },
+    "filenames": [
+     "astro_stud.png"
+    ]
+   },
+   "offset_plus10": {
+    "designed": {
+     "1": 100,
+     "2": 10,
+     "3": 10,
+     "4": 28.130803608679106,
+     "7": 0,
+     "8": 262144,
+     "9": 262144
+    },
+    "filenames": [
+     "astro_stud.png"
+    ]
+   },
+   "offset_plus20": {
+    "designed": {
+     "1": 400,
+     "2": 20,
+     "3": 20,
+     "4": 22.11020369539948,
+     "7": 0,
+     "8": 262144,
+     "9": 262144
+    },
+    "filenames": [
+     "astro_stud.png"
+    ]
+   },
+   "37_pixels_plus25": {
+    "designed": {
+     "1": 0.08821487426757812,
+     "8": 37,
+     "9": 37
+    },
+    "filenames": [
+     "astro_stud.png"
+    ]
+   },
+   "37_pixels_blue_only": {
+    "designed": {
+     "8": 37,
+     "9": 0
+    },
+    "filenames": [
+     "astro_stud.png"
+    ]
+   },
+   "one_value_off_by_1": {
+    "designed": {
+     "7": 0,
+     "8": 0,
+     "1": 1.2715657552083333e-06
+    },
+    "filenames": [
+     "astro_stud.png"
+    ]
+   }
+  },
+  "explicit": null,
+  "expected_files": [
+   "astro.png"
+  ]
+ },
+ "T02_perceptual": {
+  "rules": [
+   {
+    "output": "coffee_stud.png",
+    "metric": "SSIM",
+    "max_score": 3,
+    "tolerances": "0.95,0.9,0.8",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "coffee_stud.png",
+    "metric": "SSIM",
+    "max_score": 2,
+    "tolerances": "0.95",
+    "mode": "continuous",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "coffee_stud.png",
+    "metric": "NCC",
+    "max_score": 3,
+    "tolerances": "0.99,0.95,0.9",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "coffee_stud.png",
+    "metric": "NCC",
+    "max_score": 2,
+    "tolerances": "0.99",
+    "mode": "continuous",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "coffee_stud.png",
+    "metric": "PSNR",
+    "max_score": 2,
+    "tolerances": "40,30,25",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   }
+  ],
+  "students": {
+   "perfect": {
+    "designed": {
+     "1": 1.0,
+     "3": 1.0,
+     "5": Infinity
+    },
+    "filenames": [
+     "coffee_stud.png"
+    ]
+   },
+   "blur_sigma1": {
+    "filenames": [
+     "coffee_stud.png"
+    ]
+   },
+   "blur_sigma3": {
+    "filenames": [
+     "coffee_stud.png"
+    ]
+   },
+   "jpeg_q90": {
+    "filenames": [
+     "coffee_stud.png"
+    ]
+   },
+   "jpeg_q20": {
+    "filenames": [
+     "coffee_stud.png"
+    ]
+   },
+   "noise_sigma5": {
+    "filenames": [
+     "coffee_stud.png"
+    ]
+   },
+   "contrast_half": {
+    "filenames": [
+     "coffee_stud.png"
+    ]
+   },
+   "inverted": {
+    "designed": {
+     "3": -1.0
+    },
+    "filenames": [
+     "coffee_stud.png"
+    ]
+   }
+  },
+  "explicit": null,
+  "expected_files": [
+   "coffee.png"
+  ]
+ },
+ "T03_colour": {
+  "rules": [
+   {
+    "output": "chelsea_stud.png",
+    "metric": "ΔE",
+    "max_score": 4,
+    "tolerances": "1,2,5,10",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "chelsea_stud.png",
+    "metric": "ΔE",
+    "max_score": 2,
+    "tolerances": "10",
+    "mode": "continuous",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "chelsea_stud.png",
+    "metric": "ΔE",
+    "max_score": 2,
+    "tolerances": "2,8",
+    "mode": "bucket",
+    "aggregation": "max",
+    "notes": ""
+   }
+  ],
+  "students": {
+   "perfect": {
+    "designed": {
+     "1": 0,
+     "2": 0,
+     "3": 0
+    },
+    "filenames": [
+     "chelsea_stud.png"
+    ]
+   },
+   "red_cast_plus12": {
+    "filenames": [
+     "chelsea_stud.png"
+    ]
+   },
+   "hue_shift_10deg": {
+    "filenames": [
+     "chelsea_stud.png"
+    ]
+   },
+   "grayscale": {
+    "filenames": [
+     "chelsea_stud.png"
+    ]
+   },
+   "jpeg_q30": {
+    "filenames": [
+     "chelsea_stud.png"
+    ]
+   }
+  },
+  "explicit": null,
+  "expected_files": [
+   "chelsea.png"
+  ]
+ },
+ "T04_aggregation": {
+  "rules": [
+   {
+    "output": "patch_stud.png",
+    "metric": "MAE",
+    "max_score": 1,
+    "tolerances": "1,5,9",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "patch_stud.png",
+    "metric": "MAE",
+    "max_score": 1,
+    "tolerances": "1,5,9",
+    "mode": "bucket",
+    "aggregation": "median",
+    "notes": ""
+   },
+   {
+    "output": "patch_stud.png",
+    "metric": "MAE",
+    "max_score": 1,
+    "tolerances": "1,5,9",
+    "mode": "bucket",
+    "aggregation": "max",
+    "notes": ""
+   },
+   {
+    "output": "patch_stud.png",
+    "metric": "MAE",
+    "max_score": 1,
+    "tolerances": "1,5,9",
+    "mode": "bucket",
+    "aggregation": "trim10",
+    "notes": ""
+   },
+   {
+    "output": "patch_stud.png",
+    "metric": "MSE",
+    "max_score": 1,
+    "tolerances": "30,150,270",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "patch_stud.png",
+    "metric": "MSE",
+    "max_score": 1,
+    "tolerances": "30,150,270",
+    "mode": "bucket",
+    "aggregation": "median",
+    "notes": ""
+   },
+   {
+    "output": "patch_stud.png",
+    "metric": "MSE",
+    "max_score": 1,
+    "tolerances": "30,150,270",
+    "mode": "bucket",
+    "aggregation": "max",
+    "notes": ""
+   },
+   {
+    "output": "patch_stud.png",
+    "metric": "MSE",
+    "max_score": 1,
+    "tolerances": "30,150,270",
+    "mode": "bucket",
+    "aggregation": "trim10",
+    "notes": ""
+   },
+   {
+    "output": "patch_stud.png",
+    "metric": "ΔE",
+    "max_score": 1,
+    "tolerances": "1.08099,5.40493,9.72888",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "patch_stud.png",
+    "metric": "ΔE",
+    "max_score": 1,
+    "tolerances": "1.08099,5.40493,9.72888",
+    "mode": "bucket",
+    "aggregation": "median",
+    "notes": ""
+   },
+   {
+    "output": "patch_stud.png",
+    "metric": "ΔE",
+    "max_score": 1,
+    "tolerances": "1.08099,5.40493,9.72888",
+    "mode": "bucket",
+    "aggregation": "max",
+    "notes": ""
+   },
+   {
+    "output": "patch_stud.png",
+    "metric": "ΔE",
+    "max_score": 1,
+    "tolerances": "1.08099,5.40493,9.72888",
+    "mode": "bucket",
+    "aggregation": "trim10",
+    "notes": ""
+   }
+  ],
+  "students": {
+   "rows_5_changed": {
+    "designed": {
+     "1": 0.5,
+     "2": 0.0,
+     "3": 10.0,
+     "4": 0.0,
+     "5": 15.0,
+     "6": 0.0,
+     "7": 300.0,
+     "8": 0.0,
+     "9": 0.5404932987157041,
+     "10": 0.0,
+     "11": 10.80986597431408,
+     "12": 0.0
+    },
+    "filenames": [
+     "patch_stud.png"
+    ]
+   },
+   "rows_30_changed": {
+    "designed": {
+     "1": 3.0,
+     "2": 0.0,
+     "3": 10.0,
+     "4": 2.5,
+     "5": 90.0,
+     "6": 0.0,
+     "7": 300.0,
+     "8": 75.0,
+     "9": 3.242959792294224,
+     "10": 0.0,
+     "11": 10.80986597431408,
+     "12": 2.70246649357852
+    },
+    "filenames": [
+     "patch_stud.png"
+    ]
+   },
+   "rows_60_changed": {
+    "designed": {
+     "1": 6.0,
+     "2": 10.0,
+     "3": 10.0,
+     "4": 6.25,
+     "5": 180.0,
+     "6": 300.0,
+     "7": 300.0,
+     "8": 187.5,
+     "9": 6.485919584588448,
+     "10": 10.80986597431408,
+     "11": 10.80986597431408,
+     "12": 6.7561662339463
+    },
+    "filenames": [
+     "patch_stud.png"
+    ]
+   }
+  },
+  "explicit": null,
+  "expected_files": [
+   "patch.png"
+  ]
+ },
+ "T05_masks_topology": {
+  "rules": [
+   {
+    "output": "horse_stud.png",
+    "metric": "IoU",
+    "max_score": 3,
+    "tolerances": "0.99,0.95,0.9",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "horse_stud.png",
+    "metric": "IoU",
+    "max_score": 2,
+    "tolerances": "1",
+    "mode": "continuous",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "horse_stud.png",
+    "metric": "Objects",
+    "max_score": 2,
+    "tolerances": "0,1,3",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "horse_stud.png",
+    "metric": "Holes",
+    "max_score": 2,
+    "tolerances": "0,1",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "horse_stud.png",
+    "metric": "Euler",
+    "max_score": 2,
+    "tolerances": "0,1,2",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "horse_stud.png",
+    "metric": "Contours",
+    "max_score": 1,
+    "tolerances": "1",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "horse_stud.png",
+    "metric": "ContoursStrict",
+    "max_score": 2,
+    "tolerances": "1,0.5",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "horse_stud.png",
+    "metric": "N_DIFF_PIXELS",
+    "max_score": 2,
+    "tolerances": "thr:10 | 0,500,2000",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "gray=1; mask=./masks/horse_ring.png"
+   }
+  ],
+  "students": {
+   "perfect": {
+    "designed": {
+     "1": 1,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "6": 1,
+     "7": 1,
+     "8": 0
+    },
+    "filenames": [
+     "horse_stud.png"
+    ]
+   },
+   "eroded_3px": {
+    "filenames": [
+     "horse_stud.png"
+    ]
+   },
+   "dilated_3px": {
+    "filenames": [
+     "horse_stud.png"
+    ]
+   },
+   "shifted_5px": {
+    "filenames": [
+     "horse_stud.png"
+    ]
+   },
+   "two_extra_blobs": {
+    "designed": {
+     "3": 2,
+     "4": 0,
+     "5": 2
+    },
+    "filenames": [
+     "horse_stud.png"
+    ]
+   },
+   "one_extra_hole": {
+    "designed": {
+     "3": 0,
+     "4": 1,
+     "5": 1,
+     "6": 0
+    },
+    "filenames": [
+     "horse_stud.png"
+    ]
+   },
+   "island_in_hole": {
+    "designed": {
+     "3": 1,
+     "4": 1,
+     "5": 0,
+     "6": 0
+    },
+    "filenames": [
+     "horse_stud.png"
+    ]
+   },
+   "split_in_two": {
+    "filenames": [
+     "horse_stud.png"
+    ]
+   },
+   "inverted": {
+    "filenames": [
+     "horse_stud.png"
+    ]
+   },
+   "empty": {
+    "designed": {
+     "1": 0.0
+    },
+    "filenames": [
+     "horse_stud.png"
+    ]
+   },
+   "mask_saved_as_0_and_1": {
+    "designed": {
+     "1": 0.0
+    },
+    "filenames": [
+     "horse_stud.png"
+    ]
+   },
+   "soft_antialiased_edges": {
+    "filenames": [
+     "horse_stud.png"
+    ]
+   }
+  },
+  "explicit": null,
+  "expected_files": [
+   "horse.png"
+  ]
+ },
+ "T06_roi": {
+  "rules": [
+   {
+    "output": "rocket_stud.png",
+    "metric": "MSE",
+    "max_score": 2,
+    "tolerances": "1,100",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "mask=./masks/left.png"
+   },
+   {
+    "output": "rocket_stud.png",
+    "metric": "MSE",
+    "max_score": 2,
+    "tolerances": "1,100",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "mask=./masks/right.png"
+   },
+   {
+    "output": "rocket_stud.png",
+    "metric": "N_DIFF_PIXELS",
+    "max_score": 2,
+    "tolerances": "thr:10 | 0,1000",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "mask=./masks/left.png"
+   },
+   {
+    "output": "rocket_stud.png",
+    "metric": "N_DIFF_PIXELS",
+    "max_score": 2,
+    "tolerances": "thr:10 | 0,1000",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "mask=./masks/right.png"
+   },
+   {
+    "output": "rocket_stud.png",
+    "metric": "MSE",
+    "max_score": 2,
+    "tolerances": "1,100",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "mask=./masks/left_half_resolution.png"
+   },
+   {
+    "output": "rocket_stud.png",
+    "metric": "SSIM",
+    "max_score": 2,
+    "tolerances": "0.99,0.9",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "mask=./masks/circle.png"
+   },
+   {
+    "output": "rocket_stud.png",
+    "metric": "MSE",
+    "max_score": 2,
+    "tolerances": "1,100",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "mask=./masks/empty.png"
+   },
+   {
+    "output": "rocket_stud.png",
+    "metric": "MSE",
+    "max_score": 2,
+    "tolerances": "1,100",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "mask=./masks/does_not_exist.png"
+   },
+   {
+    "output": "rocket_stud.png",
+    "metric": "MSE",
+    "max_score": 2,
+    "tolerances": "1,250",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "rocket_stud.png",
+    "metric": "EXACT",
+    "max_score": 1,
+    "tolerances": "",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "mask=./masks/left.png"
+   },
+   {
+    "output": "rocket_stud.png",
+    "metric": "PSNR",
+    "max_score": 2,
+    "tolerances": "40",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "mask=./masks/right.png"
+   },
+   {
+    "output": "rocket_stud.png",
+    "metric": "N_DIFF_PIXELS",
+    "max_score": 2,
+    "tolerances": "thr:10 | 0,20000",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "mask=./masks/circle_half_resolution.png"
+   },
+   {
+    "output": "rocket_stud.png",
+    "metric": "MSE",
+    "max_score": 2,
+    "tolerances": "1,100",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "mask=./masks/corrupt_mask.png"
+   }
+  ],
+  "students": {
+   "perfect": {
+    "designed": {
+     "1": 0,
+     "2": 0,
+     "3": 0,
+     "4": 0,
+     "5": 0,
+     "9": 0,
+     "10": 1
+    },
+    "filenames": [
+     "rocket_stud.png"
+    ]
+   },
+   "error_everywhere": {
+    "designed": {
+     "1": 400,
+     "2": 400,
+     "3": 136640,
+     "4": 136640,
+     "9": 400
+    },
+    "filenames": [
+     "rocket_stud.png"
+    ]
+   },
+   "error_right_half": {
+    "designed": {
+     "1": 0,
+     "2": 400,
+     "3": 0,
+     "4": 136640,
+     "5": 0,
+     "9": 200.0,
+     "10": 1,
+     "11": 22.11020369539948
+    },
+    "filenames": [
+     "rocket_stud.png"
+    ]
+   },
+   "error_left_half": {
+    "designed": {
+     "1": 400,
+     "2": 0,
+     "3": 136640,
+     "4": 0,
+     "5": 400,
+     "10": 0,
+     "11": Infinity
+    },
+    "filenames": [
+     "rocket_stud.png"
+    ]
+   }
+  },
+  "explicit": null,
+  "expected_files": [
+   "rocket.png"
+  ]
+ },
+ "T07_files_formats": {
+  "rules": [
+   {
+    "output": "photo_stud.png",
+    "metric": "MSE",
+    "max_score": 2,
+    "tolerances": "1,50,500",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "photo_stud.png",
+    "metric": "SIZE",
+    "max_score": 1,
+    "tolerances": "0,5,50",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "photo_stud.png",
+    "metric": "EXACT",
+    "max_score": 1,
+    "tolerances": "",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   }
+  ],
+  "students": {
+   "exact_name": {
+    "designed": {
+     "1": 0,
+     "2": 0,
+     "3": 1
+    },
+    "filenames": [
+     "photo_stud.png"
+    ]
+   },
+   "jpeg_instead_of_png": {
+    "filenames": [
+     "photo_stud.jpg"
+    ]
+   },
+   "suffix_student": {
+    "designed": {
+     "1": 0,
+     "3": 1
+    },
+    "filenames": [
+     "photo_student.png"
+    ]
+   },
+   "suffix_dash_stud": {
+    "designed": {
+     "1": 0,
+     "3": 1
+    },
+    "filenames": [
+     "photo-stud.png"
+    ]
+   },
+   "ambiguous_two_files": {
+    "status": "AMBIGUOUS student",
+    "filenames": [
+     "photo_student.png",
+     "photo-stud.png"
+    ]
+   },
+   "substring_trap_photo10": {
+    "status": "MISSING student",
+    "filenames": [
+     "photo10_stud.png"
+    ]
+   },
+   "missing_file": {
+    "status": "MISSING student",
+    "filenames": [
+     "notes.txt"
+    ]
+   },
+   "corrupt_file": {
+    "status": "UNREADABLE student",
+    "filenames": [
+     "photo_stud.png"
+    ]
+   },
+   "zero_byte_file": {
+    "status": "UNREADABLE student",
+    "filenames": [
+     "photo_stud.png"
+    ]
+   },
+   "grayscale_png": {
+    "filenames": [
+     "photo_stud.png"
+    ]
+   },
+   "rgba_png": {
+    "designed": {
+     "1": 0,
+     "3": 1
+    },
+    "filenames": [
+     "photo_stud.png"
+    ]
+   },
+   "png_16bit_gray": {
+    "filenames": [
+     "photo_stud.png"
+    ]
+   },
+   "half_size": {
+    "designed": {
+     "2": 256
+    },
+    "filenames": [
+     "photo_stud.png"
+    ]
+   },
+   "larger_size": {
+    "designed": {
+     "2": 88
+    },
+    "filenames": [
+     "photo_stud.png"
+    ]
+   },
+   "file_in_subfolder": {
+    "designed": {
+     "1": 0,
+     "3": 1
+    },
+    "filenames": [
+     "output/photo_stud.png"
+    ]
+   },
+   "Kovács Ödön": {
+    "designed": {
+     "1": 0,
+     "3": 1
+    },
+    "filenames": [
+     "photo_stud.png"
+    ]
+   },
+   "student with spaces": {
+    "designed": {
+     "1": 0,
+     "3": 1
+    },
+    "filenames": [
+     "photo_stud.png"
+    ]
+   }
+  },
+  "explicit": null,
+  "expected_files": [
+   "photo_gt.png"
+  ]
+ },
+ "T08_console": {
+  "rules": [
+   {
+    "output": "cout",
+    "metric": "exact",
+    "max_score": 2,
+    "tolerances": "Area: 1520\nPerimeter: 160.5",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "file=stdout.txt"
+   },
+   {
+    "output": "cout",
+    "metric": "contains",
+    "max_score": 1,
+    "tolerances": "Perimeter: 160.5",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "cout",
+    "metric": "regex",
+    "max_score": 1,
+    "tolerances": "Area:\\s*15\\d\\d\\b",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "cout",
+    "metric": "regex",
+    "max_score": 1,
+    "tolerances": "Area: (",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "cout",
+    "metric": "contains",
+    "max_score": 1,
+    "tolerances": "Area: 1520, Perimeter",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "cout",
+    "metric": "exact",
+    "max_score": 1,
+    "tolerances": "done",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": "file=log.txt"
+   },
+   {
+    "output": "cout",
+    "metric": "contains",
+    "max_score": 1,
+    "tolerances": "Eredmény: 42",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   }
+  ],
+  "students": {
+   "exact_output": {
+    "filenames": [
+     "stdout.txt",
+     "log.txt"
+    ]
+   },
+   "extra_spaces_and_newlines": {
+    "filenames": [
+     "stdout.txt"
+    ]
+   },
+   "windows_line_endings": {
+    "filenames": [
+     "stdout.txt"
+    ]
+   },
+   "extra_debug_line": {
+    "filenames": [
+     "stdout.txt"
+    ]
+   },
+   "wrong_area": {
+    "filenames": [
+     "stdout.txt"
+    ]
+   },
+   "one_line_with_comma": {
+    "filenames": [
+     "stdout.txt"
+    ]
+   },
+   "hungarian_text": {
+    "filenames": [
+     "stdout.txt"
+    ]
+   },
+   "empty_output": {
+    "filenames": [
+     "stdout.txt"
+    ]
+   },
+   "no_output_file": {
+    "filenames": [
+     "result.png"
+    ]
+   }
+  },
+  "explicit": null,
+  "expected_files": []
+ },
+ "T09_rule_files": {
+  "rules": [
+   {
+    "output": "clock_stud.png",
+    "metric": "MSE",
+    "max_score": 1.5,
+    "tolerances": "1,100",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "clock_stud.png",
+    "metric": "MSE",
+    "max_score": 1.5,
+    "tolerances": "1,400",
+    "mode": "bucket",
+    "aggregation": "median",
+    "notes": ""
+   },
+   {
+    "output": "clock_stud.png",
+    "metric": "SSIMM",
+    "max_score": 1,
+    "tolerances": "0.9",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "clock_stud.png",
+    "metric": "MSE",
+    "max_score": 1,
+    "tolerances": "",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "clock_stud.png",
+    "metric": "IoU",
+    "max_score": 1,
+    "tolerances": "0.9;0.8",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "",
+    "metric": "SIZE",
+    "max_score": 1,
+    "tolerances": "0",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "clock_stud.png",
+    "metric": "PSNR",
+    "max_score": 2,
+    "tolerances": "—",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   },
+   {
+    "output": "clock_stud.png",
+    "metric": "EXACT",
+    "max_score": 1,
+    "tolerances": "—",
+    "mode": "bucket",
+    "aggregation": "mean",
+    "notes": ""
+   }
+  ],
+  "students": {
+   "perfect": {
+    "designed": {
+     "1": 0,
+     "2": 0,
+     "6": 0
+    },
+    "status_by_rule": {
+     "3": "ERROR",
+     "4": "ERROR",
+     "5": "ERROR",
+     "7": "ERROR"
+    },
+    "filenames": [
+     "clock_stud.png"
+    ]
+   },
+   "noisy": {
+    "status_by_rule": {
+     "3": "ERROR",
+     "4": "ERROR",
+     "5": "ERROR",
+     "7": "ERROR"
+    },
+    "filenames": [
+     "clock_stud.png"
+    ]
+   }
+  },
+  "explicit": null,
+  "expected_files": [
+   "clock.png"
+  ]
+ }
+}

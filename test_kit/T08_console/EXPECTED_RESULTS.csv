@@ -1,0 +1,64 @@
+student,rule,metric,expected_value,expected_status,expected_score,max_score
+exact_output,1,exact,1,,2,2
+exact_output,2,contains,1,,1,1
+exact_output,3,regex,1,,1,1
+exact_output,4,regex,,ERROR: invalid regex,0,1
+exact_output,5,contains,0,,0,1
+exact_output,6,exact,1,,1,1
+exact_output,7,contains,0,,0,1
+extra_spaces_and_newlines,1,exact,1,,2,2
+extra_spaces_and_newlines,2,contains,1,,1,1
+extra_spaces_and_newlines,3,regex,1,,1,1
+extra_spaces_and_newlines,4,regex,,ERROR: invalid regex,0,1
+extra_spaces_and_newlines,5,contains,0,,0,1
+extra_spaces_and_newlines,6,exact,,MISSING log.txt,0,1
+extra_spaces_and_newlines,7,contains,0,,0,1
+windows_line_endings,1,exact,1,,2,2
+windows_line_endings,2,contains,1,,1,1
+windows_line_endings,3,regex,1,,1,1
+windows_line_endings,4,regex,,ERROR: invalid regex,0,1
+windows_line_endings,5,contains,0,,0,1
+windows_line_endings,6,exact,,MISSING log.txt,0,1
+windows_line_endings,7,contains,0,,0,1
+extra_debug_line,1,exact,0,,0,2
+extra_debug_line,2,contains,1,,1,1
+extra_debug_line,3,regex,1,,1,1
+extra_debug_line,4,regex,,ERROR: invalid regex,0,1
+extra_debug_line,5,contains,0,,0,1
+extra_debug_line,6,exact,,MISSING log.txt,0,1
+extra_debug_line,7,contains,0,,0,1
+wrong_area,1,exact,0,,0,2
+wrong_area,2,contains,1,,1,1
+wrong_area,3,regex,1,,1,1
+wrong_area,4,regex,,ERROR: invalid regex,0,1
+wrong_area,5,contains,0,,0,1
+wrong_area,6,exact,,MISSING log.txt,0,1
+wrong_area,7,contains,0,,0,1
+one_line_with_comma,1,exact,0,,0,2
+one_line_with_comma,2,contains,1,,1,1
+one_line_with_comma,3,regex,1,,1,1
+one_line_with_comma,4,regex,,ERROR: invalid regex,0,1
+one_line_with_comma,5,contains,1,,1,1
+one_line_with_comma,6,exact,,MISSING log.txt,0,1
+one_line_with_comma,7,contains,0,,0,1
+hungarian_text,1,exact,0,,0,2
+hungarian_text,2,contains,1,,1,1
+hungarian_text,3,regex,1,,1,1
+hungarian_text,4,regex,,ERROR: invalid regex,0,1
+hungarian_text,5,contains,0,,0,1
+hungarian_text,6,exact,,MISSING log.txt,0,1
+hungarian_text,7,contains,1,,1,1
+empty_output,1,exact,0,,0,2
+empty_output,2,contains,0,,0,1
+empty_output,3,regex,0,,0,1
+empty_output,4,regex,,ERROR: invalid regex,0,1
+empty_output,5,contains,0,,0,1
+empty_output,6,exact,,MISSING log.txt,0,1
+empty_output,7,contains,0,,0,1
+no_output_file,1,exact,,MISSING stdout.txt,0,2
+no_output_file,2,contains,,MISSING stdout.txt,0,1
+no_output_file,3,regex,,MISSING stdout.txt,0,1
+no_output_file,4,regex,,MISSING stdout.txt,0,1
+no_output_file,5,contains,,MISSING stdout.txt,0,1
+no_output_file,6,exact,,MISSING log.txt,0,1
+no_output_file,7,contains,,MISSING stdout.txt,0,1

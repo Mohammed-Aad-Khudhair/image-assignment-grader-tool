@@ -1,0 +1,5 @@
+student,expected_total,max_total
+perfect,19,25
+error_everywhere,1,25
+error_right_half,9,25
+error_left_half,8,25

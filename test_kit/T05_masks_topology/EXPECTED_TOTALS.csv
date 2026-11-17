@@ -1,0 +1,13 @@
+student,expected_total,max_total
+perfect,16,16
+eroded_3px,5.975,16
+dilated_3px,4.371,16
+shifted_5px,10.67,16
+two_extra_blobs,10.32,16
+one_extra_hole,11.33,16
+island_in_hole,11.32,16
+split_in_two,10.97,16
+inverted,5.667,16
+empty,4.333,16
+mask_saved_as_0_and_1,4.333,16
+soft_antialiased_edges,9.326,16

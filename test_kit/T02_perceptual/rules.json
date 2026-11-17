@@ -1,0 +1,47 @@
+[
+ {
+  "output": "coffee_stud.png",
+  "metric": "SSIM",
+  "max_score": 3,
+  "tolerances": "0.95,0.9,0.8",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "coffee_stud.png",
+  "metric": "SSIM",
+  "max_score": 2,
+  "tolerances": "0.95",
+  "mode": "continuous",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "coffee_stud.png",
+  "metric": "NCC",
+  "max_score": 3,
+  "tolerances": "0.99,0.95,0.9",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "coffee_stud.png",
+  "metric": "NCC",
+  "max_score": 2,
+  "tolerances": "0.99",
+  "mode": "continuous",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "coffee_stud.png",
+  "metric": "PSNR",
+  "max_score": 2,
+  "tolerances": "40,30,25",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ }
+]

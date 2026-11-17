@@ -1,0 +1,110 @@
+[
+ {
+  "output": "patch_stud.png",
+  "metric": "MAE",
+  "max_score": 1,
+  "tolerances": "1,5,9",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "patch_stud.png",
+  "metric": "MAE",
+  "max_score": 1,
+  "tolerances": "1,5,9",
+  "mode": "bucket",
+  "aggregation": "median",
+  "notes": ""
+ },
+ {
+  "output": "patch_stud.png",
+  "metric": "MAE",
+  "max_score": 1,
+  "tolerances": "1,5,9",
+  "mode": "bucket",
+  "aggregation": "max",
+  "notes": ""
+ },
+ {
+  "output": "patch_stud.png",
+  "metric": "MAE",
+  "max_score": 1,
+  "tolerances": "1,5,9",
+  "mode": "bucket",
+  "aggregation": "trim10",
+  "notes": ""
+ },
+ {
+  "output": "patch_stud.png",
+  "metric": "MSE",
+  "max_score": 1,
+  "tolerances": "30,150,270",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "patch_stud.png",
+  "metric": "MSE",
+  "max_score": 1,
+  "tolerances": "30,150,270",
+  "mode": "bucket",
+  "aggregation": "median",
+  "notes": ""
+ },
+ {
+  "output": "patch_stud.png",
+  "metric": "MSE",
+  "max_score": 1,
+  "tolerances": "30,150,270",
+  "mode": "bucket",
+  "aggregation": "max",
+  "notes": ""
+ },
+ {
+  "output": "patch_stud.png",
+  "metric": "MSE",
+  "max_score": 1,
+  "tolerances": "30,150,270",
+  "mode": "bucket",
+  "aggregation": "trim10",
+  "notes": ""
+ },
+ {
+  "output": "patch_stud.png",
+  "metric": "ΔE",
+  "max_score": 1,
+  "tolerances": "1.08099,5.40493,9.72888",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "patch_stud.png",
+  "metric": "ΔE",
+  "max_score": 1,
+  "tolerances": "1.08099,5.40493,9.72888",
+  "mode": "bucket",
+  "aggregation": "median",
+  "notes": ""
+ },
+ {
+  "output": "patch_stud.png",
+  "metric": "ΔE",
+  "max_score": 1,
+  "tolerances": "1.08099,5.40493,9.72888",
+  "mode": "bucket",
+  "aggregation": "max",
+  "notes": ""
+ },
+ {
+  "output": "patch_stud.png",
+  "metric": "ΔE",
+  "max_score": 1,
+  "tolerances": "1.08099,5.40493,9.72888",
+  "mode": "bucket",
+  "aggregation": "trim10",
+  "notes": ""
+ }
+]

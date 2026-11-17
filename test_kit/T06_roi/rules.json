@@ -1,0 +1,119 @@
+[
+ {
+  "output": "rocket_stud.png",
+  "metric": "MSE",
+  "max_score": 2,
+  "tolerances": "1,100",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "mask=./masks/left.png"
+ },
+ {
+  "output": "rocket_stud.png",
+  "metric": "MSE",
+  "max_score": 2,
+  "tolerances": "1,100",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "mask=./masks/right.png"
+ },
+ {
+  "output": "rocket_stud.png",
+  "metric": "N_DIFF_PIXELS",
+  "max_score": 2,
+  "tolerances": "thr:10 | 0,1000",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "mask=./masks/left.png"
+ },
+ {
+  "output": "rocket_stud.png",
+  "metric": "N_DIFF_PIXELS",
+  "max_score": 2,
+  "tolerances": "thr:10 | 0,1000",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "mask=./masks/right.png"
+ },
+ {
+  "output": "rocket_stud.png",
+  "metric": "MSE",
+  "max_score": 2,
+  "tolerances": "1,100",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "mask=./masks/left_half_resolution.png"
+ },
+ {
+  "output": "rocket_stud.png",
+  "metric": "SSIM",
+  "max_score": 2,
+  "tolerances": "0.99,0.9",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "mask=./masks/circle.png"
+ },
+ {
+  "output": "rocket_stud.png",
+  "metric": "MSE",
+  "max_score": 2,
+  "tolerances": "1,100",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "mask=./masks/empty.png"
+ },
+ {
+  "output": "rocket_stud.png",
+  "metric": "MSE",
+  "max_score": 2,
+  "tolerances": "1,100",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "mask=./masks/does_not_exist.png"
+ },
+ {
+  "output": "rocket_stud.png",
+  "metric": "MSE",
+  "max_score": 2,
+  "tolerances": "1,250",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "rocket_stud.png",
+  "metric": "EXACT",
+  "max_score": 1,
+  "tolerances": "",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "mask=./masks/left.png"
+ },
+ {
+  "output": "rocket_stud.png",
+  "metric": "PSNR",
+  "max_score": 2,
+  "tolerances": "40",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "mask=./masks/right.png"
+ },
+ {
+  "output": "rocket_stud.png",
+  "metric": "N_DIFF_PIXELS",
+  "max_score": 2,
+  "tolerances": "thr:10 | 0,20000",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "mask=./masks/circle_half_resolution.png"
+ },
+ {
+  "output": "rocket_stud.png",
+  "metric": "MSE",
+  "max_score": 2,
+  "tolerances": "1,100",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "mask=./masks/corrupt_mask.png"
+ }
+]

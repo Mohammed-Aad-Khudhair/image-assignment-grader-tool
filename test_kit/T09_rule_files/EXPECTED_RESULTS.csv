@@ -1,0 +1,17 @@
+student,rule,metric,expected_value,expected_status,expected_score,max_score
+perfect,1,MSE,0,,1.5,1.5
+perfect,2,MSE,0,,1.5,1.5
+perfect,3,SSIMM,,ERROR,0,1
+perfect,4,MSE,,ERROR,0,1
+perfect,5,IoU,,ERROR,0,1
+perfect,6,SIZE,0,,1,1
+perfect,7,PSNR,,ERROR,0,2
+perfect,8,EXACT,1,,1,1
+noisy,1,MSE,64.1419,,0.75,1.5
+noisy,2,MSE,50.6667,,0.75,1.5
+noisy,3,SSIMM,,ERROR,0,1
+noisy,4,MSE,,ERROR,0,1
+noisy,5,IoU,,ERROR,0,1
+noisy,6,SIZE,0,,1,1
+noisy,7,PSNR,,ERROR,0,2
+noisy,8,EXACT,0,,0,1

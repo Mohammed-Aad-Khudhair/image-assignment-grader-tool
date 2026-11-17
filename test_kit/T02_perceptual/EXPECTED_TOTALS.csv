@@ -1,0 +1,9 @@
+student,expected_total,max_total
+perfect,12,12
+blur_sigma1,7.495,12
+blur_sigma3,5.374,12
+jpeg_q90,11.33,12
+jpeg_q20,7.461,12
+noise_sigma5,10.29,12
+contrast_half,6.675,12
+inverted,0,12

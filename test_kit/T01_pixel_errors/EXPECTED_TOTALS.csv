@@ -1,0 +1,10 @@
+student,expected_total,max_total
+perfect,30,30
+offset_plus1,28.98,30
+offset_plus2,25.67,30
+offset_plus5,17.92,30
+offset_plus10,6.172,30
+offset_plus20,1.921,30
+37_pixels_plus25,26,30
+37_pixels_blue_only,28,30
+one_value_off_by_1,29,30

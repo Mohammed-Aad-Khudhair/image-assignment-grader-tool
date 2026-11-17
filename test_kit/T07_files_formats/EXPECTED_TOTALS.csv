@@ -1,0 +1,18 @@
+student,expected_total,max_total
+exact_name,4,4
+jpeg_instead_of_png,2.333,4
+suffix_student,4,4
+suffix_dash_stud,4,4
+ambiguous_two_files,0,4
+substring_trap_photo10,0,4
+missing_file,0,4
+corrupt_file,0,4
+zero_byte_file,0,4
+grayscale_png,1,4
+rgba_png,4,4
+png_16bit_gray,1,4
+half_size,0.6667,4
+larger_size,1.333,4
+file_in_subfolder,4,4
+Kovács Ödön,4,4
+student with spaces,4,4

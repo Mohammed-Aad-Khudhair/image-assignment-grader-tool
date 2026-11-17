@@ -1,0 +1,52 @@
+student,rule,metric,expected_value,expected_status,expected_score,max_score
+exact_name,1,MSE,0,,2,2
+exact_name,2,SIZE,0,,1,1
+exact_name,3,EXACT,1,,1,1
+jpeg_instead_of_png,1,MSE,9.53844,,1.333,2
+jpeg_instead_of_png,2,SIZE,0,,1,1
+jpeg_instead_of_png,3,EXACT,0,,0,1
+suffix_student,1,MSE,0,,2,2
+suffix_student,2,SIZE,0,,1,1
+suffix_student,3,EXACT,1,,1,1
+suffix_dash_stud,1,MSE,0,,2,2
+suffix_dash_stud,2,SIZE,0,,1,1
+suffix_dash_stud,3,EXACT,1,,1,1
+ambiguous_two_files,1,MSE,,AMBIGUOUS student,0,2
+ambiguous_two_files,2,SIZE,,AMBIGUOUS student,0,1
+ambiguous_two_files,3,EXACT,,AMBIGUOUS student,0,1
+substring_trap_photo10,1,MSE,,MISSING student,0,2
+substring_trap_photo10,2,SIZE,,MISSING student,0,1
+substring_trap_photo10,3,EXACT,,MISSING student,0,1
+missing_file,1,MSE,,MISSING student,0,2
+missing_file,2,SIZE,,MISSING student,0,1
+missing_file,3,EXACT,,MISSING student,0,1
+corrupt_file,1,MSE,,UNREADABLE student,0,2
+corrupt_file,2,SIZE,,UNREADABLE student,0,1
+corrupt_file,3,EXACT,,UNREADABLE student,0,1
+zero_byte_file,1,MSE,,UNREADABLE student,0,2
+zero_byte_file,2,SIZE,,UNREADABLE student,0,1
+zero_byte_file,3,EXACT,,UNREADABLE student,0,1
+grayscale_png,1,MSE,1057.41,,0,2
+grayscale_png,2,SIZE,0,,1,1
+grayscale_png,3,EXACT,0,,0,1
+rgba_png,1,MSE,0,,2,2
+rgba_png,2,SIZE,0,,1,1
+rgba_png,3,EXACT,1,,1,1
+png_16bit_gray,1,MSE,1057.41,,0,2
+png_16bit_gray,2,SIZE,0,,1,1
+png_16bit_gray,3,EXACT,0,,0,1
+half_size,1,MSE,99.4736,,0.6667,2
+half_size,2,SIZE,256,,0,1
+half_size,3,EXACT,0,,0,1
+larger_size,1,MSE,8.8832,,1.333,2
+larger_size,2,SIZE,88,,0,1
+larger_size,3,EXACT,0,,0,1
+file_in_subfolder,1,MSE,0,,2,2
+file_in_subfolder,2,SIZE,0,,1,1
+file_in_subfolder,3,EXACT,1,,1,1
+Kovács Ödön,1,MSE,0,,2,2
+Kovács Ödön,2,SIZE,0,,1,1
+Kovács Ödön,3,EXACT,1,,1,1
+student with spaces,1,MSE,0,,2,2
+student with spaces,2,SIZE,0,,1,1
+student with spaces,3,EXACT,1,,1,1

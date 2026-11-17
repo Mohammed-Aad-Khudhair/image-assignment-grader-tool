@@ -1,0 +1,29 @@
+[
+ {
+  "output": "chelsea_stud.png",
+  "metric": "ΔE",
+  "max_score": 4,
+  "tolerances": "1,2,5,10",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "chelsea_stud.png",
+  "metric": "ΔE",
+  "max_score": 2,
+  "tolerances": "10",
+  "mode": "continuous",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "chelsea_stud.png",
+  "metric": "ΔE",
+  "max_score": 2,
+  "tolerances": "2,8",
+  "mode": "bucket",
+  "aggregation": "max",
+  "notes": ""
+ }
+]

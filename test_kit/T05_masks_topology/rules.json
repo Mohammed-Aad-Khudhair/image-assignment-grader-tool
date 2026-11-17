@@ -1,0 +1,74 @@
+[
+ {
+  "output": "horse_stud.png",
+  "metric": "IoU",
+  "max_score": 3,
+  "tolerances": "0.99,0.95,0.9",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "horse_stud.png",
+  "metric": "IoU",
+  "max_score": 2,
+  "tolerances": "1",
+  "mode": "continuous",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "horse_stud.png",
+  "metric": "Objects",
+  "max_score": 2,
+  "tolerances": "0,1,3",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "horse_stud.png",
+  "metric": "Holes",
+  "max_score": 2,
+  "tolerances": "0,1",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "horse_stud.png",
+  "metric": "Euler",
+  "max_score": 2,
+  "tolerances": "0,1,2",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "horse_stud.png",
+  "metric": "Contours",
+  "max_score": 1,
+  "tolerances": "1",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "horse_stud.png",
+  "metric": "ContoursStrict",
+  "max_score": 2,
+  "tolerances": "1,0.5",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "horse_stud.png",
+  "metric": "N_DIFF_PIXELS",
+  "max_score": 2,
+  "tolerances": "thr:10 | 0,500,2000",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "gray=1; mask=./masks/horse_ring.png"
+ }
+]

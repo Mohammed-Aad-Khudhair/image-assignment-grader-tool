@@ -1,0 +1,92 @@
+[
+ {
+  "output": "astro_stud.png",
+  "metric": "MSE",
+  "max_score": 4,
+  "tolerances": "1,4,25,100",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "astro_stud.png",
+  "metric": "MAE",
+  "max_score": 4,
+  "tolerances": "1,2,5,10",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "astro_stud.png",
+  "metric": "RMSE",
+  "max_score": 4,
+  "tolerances": "1,2,5,10",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "astro_stud.png",
+  "metric": "PSNR",
+  "max_score": 4,
+  "tolerances": "40,34,28,20",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "astro_stud.png",
+  "metric": "MSE",
+  "max_score": 2,
+  "tolerances": "100",
+  "mode": "continuous",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "astro_stud.png",
+  "metric": "PSNR",
+  "max_score": 2,
+  "tolerances": "48",
+  "mode": "continuous",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "astro_stud.png",
+  "metric": "EXACT",
+  "max_score": 1,
+  "tolerances": "",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "astro_stud.png",
+  "metric": "N_DIFF_PIXELS",
+  "max_score": 3,
+  "tolerances": "thr:10 | 0,50,500",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "logic=any"
+ },
+ {
+  "output": "astro_stud.png",
+  "metric": "N_DIFF_PIXELS",
+  "max_score": 3,
+  "tolerances": "thr:10 | 0,50,500",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "logic=all"
+ },
+ {
+  "output": "astro_stud.png",
+  "metric": "N_DIFF_PIXELS",
+  "max_score": 3,
+  "tolerances": "thr:5 | 0,50,500",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "gray=1"
+ }
+]

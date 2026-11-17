@@ -1,0 +1,65 @@
+[
+ {
+  "output": "cout",
+  "metric": "exact",
+  "max_score": 2,
+  "tolerances": "Area: 1520\nPerimeter: 160.5",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "file=stdout.txt"
+ },
+ {
+  "output": "cout",
+  "metric": "contains",
+  "max_score": 1,
+  "tolerances": "Perimeter: 160.5",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "cout",
+  "metric": "regex",
+  "max_score": 1,
+  "tolerances": "Area:\\s*15\\d\\d\\b",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "cout",
+  "metric": "regex",
+  "max_score": 1,
+  "tolerances": "Area: (",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "cout",
+  "metric": "contains",
+  "max_score": 1,
+  "tolerances": "Area: 1520, Perimeter",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "cout",
+  "metric": "exact",
+  "max_score": 1,
+  "tolerances": "done",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": "file=log.txt"
+ },
+ {
+  "output": "cout",
+  "metric": "contains",
+  "max_score": 1,
+  "tolerances": "Eredmény: 42",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ }
+]

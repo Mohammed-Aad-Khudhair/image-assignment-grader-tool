@@ -1,0 +1,74 @@
+[
+ {
+  "output": "clock_stud.png",
+  "metric": "MSE",
+  "max_score": 1.5,
+  "tolerances": "1,100",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "clock_stud.png",
+  "metric": "MSE",
+  "max_score": 1.5,
+  "tolerances": "1,400",
+  "mode": "bucket",
+  "aggregation": "median",
+  "notes": ""
+ },
+ {
+  "output": "clock_stud.png",
+  "metric": "SSIMM",
+  "max_score": 1,
+  "tolerances": "0.9",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "clock_stud.png",
+  "metric": "MSE",
+  "max_score": 1,
+  "tolerances": "",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "clock_stud.png",
+  "metric": "IoU",
+  "max_score": 1,
+  "tolerances": "0.9;0.8",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "",
+  "metric": "SIZE",
+  "max_score": 1,
+  "tolerances": "0",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "clock_stud.png",
+  "metric": "PSNR",
+  "max_score": 2,
+  "tolerances": "—",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ },
+ {
+  "output": "clock_stud.png",
+  "metric": "EXACT",
+  "max_score": 1,
+  "tolerances": "—",
+  "mode": "bucket",
+  "aggregation": "mean",
+  "notes": ""
+ }
+]
