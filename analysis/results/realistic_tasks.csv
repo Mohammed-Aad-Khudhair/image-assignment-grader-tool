@@ -1,0 +1,49 @@
+rubric,task,submission,correct,points,max_points,values
+initial,gray,Pillow convert('L'),1,3.0,3,SSIM=1; MAE=1.53086e-05
+initial,gray,NumPy BT.601 formula,1,3.0,3,SSIM=1; MAE=1.53086e-05
+initial,gray,RGB weights applied to BGR data,0,2.5,3,SSIM=0.994732; MAE=8.23906
+initial,gray,green channel only,0,2.5,3,SSIM=0.99501; MAE=5.27047
+initial,blur,SciPy gaussian_filter,1,3.0,3,SSIM=0.999292; PSNR=52.0178
+initial,blur,scikit-image gaussian,1,3.0,3,SSIM=0.998117; PSNR=45.6806
+initial,blur,Pillow GaussianBlur(2),1,3.0,3,SSIM=0.996113; PSNR=48.4542
+initial,blur,sigma 6 instead of 2,0,3.0,3,SSIM=0.979797; PSNR=41.3642
+initial,blur,5x5 median filter instead of Gaussian,0,3.0,3,SSIM=0.99016; PSNR=40.3634
+initial,otsu,scikit-image threshold_otsu,1,4.0,4,IoU=1; Objects=0
+initial,otsu,Otsu written with NumPy,1,4.0,4,IoU=1; Objects=0
+initial,otsu,fixed threshold 127,0,2.0,4,IoU=0.975393; Objects=8
+initial,otsu,foreground not inverted,0,0.333333,4,IoU=0; Objects=5
+initial,opening,"scikit-image opening, disk(2)",1,3.333333,4,IoU=0.998503; Euler=6
+initial,opening,"SciPy binary_opening, 5x5 ellipse",1,4.0,4,IoU=1; Euler=0
+initial,opening,closing instead of opening,0,3.333333,4,IoU=0.99382; Euler=7
+initial,opening,erosion only,0,2.333333,4,IoU=0.980977; Euler=9
+initial,saturation,scikit-image rgb2hsv / hsv2rgb,1,3.0,3,ΔE=0.378633; SSIM=0.993924
+initial,saturation,8-bit overflow (no clipping),0,0.0,3,ΔE=12.7604; SSIM=0.590637
+initial,saturation,value channel scaled instead,0,0.333333,3,ΔE=11.6093; SSIM=0.883225
+initial,sobel,scikit-image sobel,1,1.0,3,NCC=0.784857; SSIM=0.997763
+initial,sobel,SciPy ndimage.sobel,1,1.0,3,NCC=0.784857; SSIM=0.997763
+initial,sobel,x-gradient only,0,0.666667,3,NCC=0.703285; SSIM=0.800042
+initial,sobel,Laplacian instead of Sobel,0,0.0,3,NCC=0.344382; SSIM=0.59722
+calibrated,gray,Pillow convert('L'),1,3.0,3,SSIM=1; MAE=1.53086e-05
+calibrated,gray,NumPy BT.601 formula,1,3.0,3,SSIM=1; MAE=1.53086e-05
+calibrated,gray,RGB weights applied to BGR data,0,2.5,3,SSIM=0.994732; MAE=8.23906
+calibrated,gray,green channel only,0,2.5,3,SSIM=0.99501; MAE=5.27047
+calibrated,blur,SciPy gaussian_filter,1,3.0,3,SSIM=0.999292; PSNR=52.0178
+calibrated,blur,scikit-image gaussian,1,3.0,3,SSIM=0.998117; PSNR=45.6806
+calibrated,blur,Pillow GaussianBlur(2),1,3.0,3,SSIM=0.996113; PSNR=48.4542
+calibrated,blur,sigma 6 instead of 2,0,0.666667,3,SSIM=0.979797; PSNR=41.3642
+calibrated,blur,5x5 median filter instead of Gaussian,0,2.0,3,SSIM=0.99016; PSNR=40.3634
+calibrated,otsu,scikit-image threshold_otsu,1,4.0,4,IoU=1; Objects=0
+calibrated,otsu,Otsu written with NumPy,1,4.0,4,IoU=1; Objects=0
+calibrated,otsu,fixed threshold 127,0,2.0,4,IoU=0.975393; Objects=8
+calibrated,otsu,foreground not inverted,0,0.333333,4,IoU=0; Objects=5
+calibrated,opening,"scikit-image opening, disk(2)",1,3.333333,4,IoU=0.998503; Euler=6
+calibrated,opening,"SciPy binary_opening, 5x5 ellipse",1,4.0,4,IoU=1; Euler=0
+calibrated,opening,closing instead of opening,0,1.333333,4,IoU=0.99382; Euler=7
+calibrated,opening,erosion only,0,0.333333,4,IoU=0.980977; Euler=9
+calibrated,saturation,scikit-image rgb2hsv / hsv2rgb,1,3.0,3,ΔE=0.378633; SSIM=0.993924
+calibrated,saturation,8-bit overflow (no clipping),0,0.0,3,ΔE=12.7604; SSIM=0.590637
+calibrated,saturation,value channel scaled instead,0,0.333333,3,ΔE=11.6093; SSIM=0.883225
+calibrated,sobel,scikit-image sobel,1,3.0,3,NCC=1; SSIM=0.997763
+calibrated,sobel,SciPy ndimage.sobel,1,3.0,3,NCC=1; SSIM=0.997763
+calibrated,sobel,x-gradient only,0,0.0,3,NCC=0.799543; SSIM=0.800042
+calibrated,sobel,Laplacian instead of Sobel,0,0.0,3,NCC=0.353734; SSIM=0.59722

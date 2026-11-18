@@ -6,19 +6,21 @@ Scripts that measure how ImgGrader's results depend on its settings, and how fas
 | --- | --- | --- |
 | `thresholds.py` | How much do totals and rankings change if every tolerance is 10 % or 20 % stricter or more lenient, or if continuous instead of bucket scoring is used? | `results/thresholds.csv` |
 | `resizing.py` | What does the automatic resizing of a student image of the wrong size do to values and scores? How do other interpolation methods compare? | `results/resizing_case_studies.csv`, `results/resizing_interpolation.csv` |
+| `realistic_tasks.py` | Do typical rubrics rank every correct solution of six course tasks above every typical mistake, before and after calibrating the tolerances? | `results/realistic_tasks.csv` |
 | `aggregation.py` | How much do MSE, MAE and ΔE depend on the aggregation (mean, median, max, trim10)? | `results/aggregation.csv` |
 | `performance.py` | How long does a batch of 30, 100 and 300 students take, and how much memory does it use? | `results/performance_<system>.csv` |
 
-Run from the repository root (packages: those in `requirements.txt` and `scipy`):
+Run from the repository root (packages: those in `requirements.txt`, `scipy`, and `Pillow` for `realistic_tasks.py`):
 
 ```
 python analysis/thresholds.py
 python analysis/resizing.py
+python analysis/realistic_tasks.py
 python analysis/aggregation.py
 python analysis/performance.py
 ```
 
-The first three scripts give the same files on every run. `performance.py` measures time and memory, which depend on the computer; it writes one file per operating system.
+All scripts except `performance.py` give the same files on every run. `performance.py` measures time and memory, which depend on the computer; it writes one file per operating system.
 
 ## thresholds.py
 
@@ -45,6 +47,15 @@ Results: no rule score and no total increased. Lower-resolution submissions lost
 Results:
 - When the reference size is an exact multiple of the student's size (all T02 cases), area interpolation gives the same image as nearest-neighbour: it repeats pixels and does not smooth. For the grey-level images MSE grows and SSIM falls with every method (e.g. the perfect T02 image at 50 %: MSE 0 → 218.8, SSIM 1 → 0.785). The smoothing methods (bilinear, bicubic) give lower MSE than area, so they would hide more of the lost detail.
 - The histogram distances are small (χ² ≤ 0.021 in all cases; ≤ 0.008 for area interpolation): resizing hardly changes the distribution of grey levels, so the score change comes from the lost detail, not from a shift in intensities.
+
+## realistic_tasks.py
+
+Six typical course tasks on two photos (the ISIC lesion photo and the scikit-image `coffee` photo): grey-level conversion, Gaussian blur (σ = 2), Otsu threshold, morphological opening, a 30 % saturation increase in HSV, and the Sobel gradient magnitude. The instructor's reference is computed with OpenCV. Each task has one to three **correct** submissions made with other libraries or by hand (Pillow, scikit-image, SciPy, NumPy) and two **typical mistakes** (e.g. σ = 6 instead of 2, a median instead of a Gaussian filter, closing instead of opening, RGB weights applied to BGR data, 8-bit overflow, only the x-gradient). 24 submissions in total, graded with two rubrics:
+
+- **initial**: first-guess tolerances an instructor might choose without testing;
+- **calibrated**: for blur, opening and Sobel, the best band is set so that it still contains the worst correct submission, and the Sobel rules use a mask that ignores the 3-pixel image border (libraries treat borders differently). Calibration uses only the correct submissions.
+
+Results: with the initial rubric, every correct submission scored higher than every mistake in 4 of the 6 tasks. In the blur task, σ = 6 and the median filter received full points (SSIM ≥ 0.98, PSNR ≥ 40 dB); in the opening task, closing scored as high as a correct solution made with scikit-image (IoU 0.9938 against 0.9985). Correct Sobel solutions received only 1 of 3 points because of border differences (NCC 0.78). With the calibrated rubric, all 6 tasks were separated, and the correct Sobel solutions received full points (NCC 1.0 inside the mask). In the grey-level task the mistakes still received 2.5 of 3 points: SSIM hardly changes when the channel weights are wrong, and only MAE separates them.
 
 ## aggregation.py
 
