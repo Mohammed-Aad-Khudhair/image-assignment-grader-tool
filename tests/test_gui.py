@@ -84,8 +84,8 @@ def test_rule_popup_stores_console_text_in_tolerances(g, qapp):
 
 def test_example_rule_files_are_valid(g):
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    for name in ("isic_lesion_rules.json", "hrf_H01_rules.json", "hrf_G12_rules.json", "hrf_DR07_rules.json"):
-        rules = json.load(open(os.path.join(root, "rules", name), encoding="utf-8"))
+    for name in ("isic/rules.json", "hrf/rules_H01.json", "hrf/rules_G12.json", "hrf/rules_DR07.json"):
+        rules = json.load(open(os.path.join(root, "case_studies", name), encoding="utf-8"))
         assert rules and all(r["metric"] in g.METRICS for r in rules)
 
 def test_batch_csv_columns_follow_rule_order(g, qapp, tmp_path, monkeypatch):

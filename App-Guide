@@ -251,3 +251,29 @@ ________________________________________
 •	“ERROR: no expected text set” → a cout rule has an empty Tolerance(s); type the expected text, snippet or regex there (an empty text would match any output, so it is never scored).
 •	ROI has no effect → draw/load it, then re-run; mask is applied during evaluation.
 •	Batch for multiple tasks → leave the expected image empty and select an Expected Dir that holds all references; or run once per expected image (load expected → Batch → repeat).
+________________________________________
+12) Practical advice
+Choosing tolerances
+•	Start from what a correct solution gives. Run your own reference solution, and one or two slightly different correct solutions (e.g. another library or another parameter value), through Batch Evaluate. Their values show how far a correct answer can be from the reference; the best band should include them.
+•	Then add a few typical wrong answers (e.g. a missing step, a wrong threshold, a shifted mask) and check that they fall into lower bands or get 0. The folders case_studies/ and test_kit/ show complete examples.
+•	Bands are equal steps: with n tolerances, the bands give MaxScore, then MaxScore·(1 − 1/n), (1 − 2/n), …, and 0 below the last tolerance. Example: IoU with 0.95,0.90,0.80 and MaxScore 3 gives 3, 2, 1 or 0 points.
+•	Keep the direction in mind (Section 3): for lower-is-better metrics the first band is the smallest value.
+•	Lossy formats change pixels. If students may save JPEG, do not use EXACT, and use a per-pixel threshold (e.g. thr:10) for N_DIFF_PIXELS. Ask for PNG when the result must match exactly.
+•	Keep the rule file (Export Rules) with the course material, so the same rubric is used for every group and can be checked later.
+Bucket or continuous?
+•	bucket — when you want a few clear grades that are easy to explain to students, e.g. an exam or a final project: “IoU ≥ 0.90 gives full points, ≥ 0.80 gives half”.
+•	continuous — when you want every improvement to count, e.g. weekly lab exercises where students try to get closer to the reference. Higher-is-better: score = MaxScore · min(value / highest tolerance, 1). Lower-is-better: score = MaxScore · max(0, 1 − value / largest tolerance).
+File names
+•	Tell students the exact output file name, e.g. mask_stud.png, and give each student one folder (students/<name>/).
+•	ImgGrader looks for the exact name first (also in subfolders), then for the same name with or without a student suffix (_stud, _student, -stud, -student) and any image extension (.png, .jpg, .jpeg, .bmp, .tif, .tiff).
+•	If the exact name is not found and two files match (e.g. mask-stud.png and mask_student.png), the rule is reported as AMBIGUOUS with 0 points; no file is picked. A missing file is MISSING, an empty or damaged file is UNREADABLE. Check the CSV for these entries before publishing grades.
+•	Reference files in the Expected Dir may carry the suffix gt, ref, reference or expected, after _ or - (mask_gt.png, mask-reference.png).
+Image size
+•	A student image of a different size is resized to the reference size (area interpolation) before comparison, and the CSV column R<n>_<metric>_resized is 1. Resizing smooths small errors, so if the output size is part of the task, add a SIZE rule (it compares the original sizes) or tell students the required size.
+Formats
+•	Images: PNG, JPEG, BMP and TIFF; grey, colour, RGBA (alpha ignored) and 16-bit images are read. Masks: any of these; white (grey value above 127) = included.
+•	Console output: a text file written by the student's program (default stdout.txt). ImgGrader does not run student code; the files must already be in the student folders.
+Limitations
+•	Each rule compares the student's output with one reference. If several different outputs are correct, use tolerant metrics and bands (e.g. IoU or SSIM instead of EXACT) that every correct output reaches.
+•	ImgGrader produces scores and the CSV report, not written feedback; per-rule values in the CSV can be shared with students to explain the score.
+•	Tested on Windows and Linux; not tested on macOS.

@@ -1,0 +1,2 @@
+time_ms=1560
+algo=dilate

@@ -53,12 +53,9 @@ pip install -r requirements.txt
 python GraderApplicationCode.py
 ```
 
-## Example rule files
+## Case studies
 
-The `rules/` folder contains importable rule sets for the two case studies in the paper:
-
-- `isic_lesion_rules.json` – lesion segmentation (ISIC 2017, Task 1)
-- `hrf_H01_rules.json`, `hrf_G12_rules.json`, `hrf_DR07_rules.json` – retinal vessel segmentation (HRF), one rule set per reference image; load the matching expected image before running a batch
+The `case_studies/` folder contains the two case studies of the paper, ready to grade: lesion segmentation (ISIC 2017, Task 1) and retinal vessel segmentation (HRF), with reference images, masks, synthetic student submissions, rule files and the exact results. See [case_studies/README.md](case_studies/README.md).
 
 Relative mask paths in a rule file (e.g. `mask=./expected/H01_fov.png`) are resolved from the folder of the rule file.
 
