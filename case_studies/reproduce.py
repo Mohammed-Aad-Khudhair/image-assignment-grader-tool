@@ -60,12 +60,15 @@ for case, rule_file, out_name in CASES:
     worker.finished.connect(lambda r: res.setdefault("r", r))
     worker.run()
     results = res["r"]
-    # Mask paths are resolved to absolute paths; write them relative to the case folder.
+    # Mask paths are resolved to absolute paths; write all paths relative to the
+    # case folder and with "/", so the files are the same on Windows and Linux.
     case_dir = os.getcwd()
     for r in results:
         for k, v in r.items():
-            if isinstance(v, str) and os.path.isabs(v) and v.startswith(case_dir):
-                r[k] = os.path.relpath(v, case_dir)
+            if k.endswith(("_mask", "_path")) and isinstance(v, str) and v:
+                if os.path.isabs(v) and v.startswith(case_dir):
+                    v = os.path.relpath(v, case_dir)
+                r[k] = v.replace(os.sep, "/")
     # Column order as in the program's CSV export (on_batch_finished).
     keys = list(dict.fromkeys(k for r in results for k in r.keys()))
     keys = ["student"] + [k for k in keys if k not in ("student", "total_score")] + ["total_score"]
