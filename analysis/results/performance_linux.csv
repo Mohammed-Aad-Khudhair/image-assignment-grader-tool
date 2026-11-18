@@ -1,0 +1,7 @@
+case,students,rules,image_size,seconds,seconds_per_student,peak_memory_mb,cpu,logical_cores,os,python
+ISIC,30,4,1022x767,0.945,0.0315,145.0,Intel(R) Xeon(R) Processor @ 2.30GHz,2,Linux 6.18.44-fc-v595,3.13.17
+ISIC,100,4,1022x767,2.889,0.0289,147.5,Intel(R) Xeon(R) Processor @ 2.30GHz,2,Linux 6.18.44-fc-v595,3.13.17
+ISIC,300,4,1022x767,9.48,0.0316,145.9,Intel(R) Xeon(R) Processor @ 2.30GHz,2,Linux 6.18.44-fc-v595,3.13.17
+H01,30,3,3504x2336,10.206,0.3402,300.6,Intel(R) Xeon(R) Processor @ 2.30GHz,2,Linux 6.18.44-fc-v595,3.13.17
+H01,100,3,3504x2336,33.763,0.3376,300.8,Intel(R) Xeon(R) Processor @ 2.30GHz,2,Linux 6.18.44-fc-v595,3.13.17
+H01,300,3,3504x2336,102.735,0.3425,301.3,Intel(R) Xeon(R) Processor @ 2.30GHz,2,Linux 6.18.44-fc-v595,3.13.17

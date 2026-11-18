@@ -59,6 +59,10 @@ The `case_studies/` folder contains the two case studies of the paper, ready to 
 
 Relative mask paths in a rule file (e.g. `mask=./expected/H01_fov.png`) are resolved from the folder of the rule file.
 
+## Analyses
+
+The `analysis/` folder contains scripts and results on how scores depend on tolerances, scoring mode, resizing and aggregation, and on batch runtime and memory. See [analysis/README.md](analysis/README.md).
+
 ## Running the tests
 
 ```bash

@@ -37,6 +37,7 @@
 ### Added
 - `tests/`: 59 automated tests (`python -m pytest tests`).
 - `case_studies/`: the ISIC lesion and HRF vessel case studies with images, masks, synthetic student submissions, rule files, exact results and the scripts that reproduce them (replaces the top-level `rules.json`, which was not valid JSON).
+- `analysis/`: sensitivity of scores to tolerances, scoring mode, resizing and aggregation, and batch runtime and memory, with scripts and results.
 - `test_kit/`: a synthetic class (9 tasks, 69 students, 459 results with independently computed answers) for checking that ImgGrader grades correctly.
 - `requirements.txt` lists the packages the code imports.
 - `CITATION.cff` and this changelog.
