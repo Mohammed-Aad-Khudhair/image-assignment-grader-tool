@@ -51,7 +51,7 @@ A result matches if the value differs from the correct value by at most 0.1 % (a
 
 | Task | Students | Results | ImgGrader functions checked |
 | --- | --- | --- | --- |
-| **T01_pixel_errors** | 9 | 90 | MSE, MAE, RMSE, PSNR in bucket and continuous mode; EXACT; N_DIFF_PIXELS with `logic=any`, `logic=all` and `gray=1`; identical images (PSNR = ∞). Errors are constructed exactly: +1, +2, +5, +10, +20 on every channel, 37 changed pixels, one value off by 1. |
+| **T01_pixel_errors** | 9 | 90 | MSE, MAE, RMSE, PSNR in bucket mode, MSE and PSNR also in continuous mode; EXACT; N_DIFF_PIXELS with `logic=any`, `logic=all` and `gray=1`; identical images (PSNR = ∞). Errors are constructed exactly: +1, +2, +5, +10, +20 on every channel, 37 changed pixels, one value off by 1. |
 | **T02_perceptual** | 8 | 40 | SSIM, NCC and PSNR on blur, JPEG compression, noise, half contrast and an inverted image (negative NCC must give 0 points). |
 | **T03_colour** | 5 | 15 | ΔE (CIEDE2000) with mean and max aggregation on a red colour cast, a 10° hue shift, a grey image and strong JPEG compression. |
 | **T04_aggregation** | 3 | 36 | Aggregation `mean`, `median`, `max` and `trim10` for MAE, MSE and ΔE, with 5 %, 30 % and 60 % of the pixels changed. |
