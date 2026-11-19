@@ -15,7 +15,7 @@
 
 ### Fixed – files, masks and console output
 - File matching: exact name first, then the same name without student suffixes (`_stud`, `_student`) and reference suffixes (`_gt`, `-reference`, `_ref`, `_expected`). Several candidates are reported as `AMBIGUOUS` with 0 points instead of picking one; this includes reference files with the same name in different subfolders of the Expected Dir.
-- Missing, unreadable and ambiguous student or reference files are reported separately in the CSV.
+- Missing, unreadable and ambiguous student or reference files are reported separately in the CSV. An explicitly loaded reference image that cannot be read is reported as `UNREADABLE expected` for every rule instead of being replaced by references from the Expected Dir.
 - File paths in the CSV are written in one normalised form (on Windows always with backslashes), whether they come from a file dialog, a rule file or the Expected Dir lookup.
 - Importing rules no longer turns one rule's mask into a global mask, and loading a global mask no longer overwrites a rule's own `mask=`.
 - Relative mask paths are read from the folder of the imported rule file; a missing mask is an error instead of an unmasked evaluation.
@@ -36,7 +36,7 @@
 - Removed a deprecated Qt call (`exec_`) that printed a warning when a batch started.
 
 ### Added
-- `tests/`: 67 automated tests (`python -m pytest tests`).
+- `tests/`: 68 automated tests (`python -m pytest tests`).
 - `case_studies/`: the ISIC lesion and HRF vessel case studies with images, masks, synthetic student submissions, rule files, exact results and the scripts that reproduce them (replaces the top-level `rules.json`, which was not valid JSON).
 - `analysis/`: sensitivity of scores to tolerances, scoring mode, resizing and aggregation, and batch runtime and memory, with scripts and results.
 - `test_kit/`: a synthetic class (9 tasks, 69 students, 459 results with independently computed answers) for checking that ImgGrader grades correctly.

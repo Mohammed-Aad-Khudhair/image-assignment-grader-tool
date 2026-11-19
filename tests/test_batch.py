@@ -260,3 +260,13 @@ def test_same_reference_name_in_two_places_is_ambiguous(tmp_path, layout):
     row = run_batch(str(tmp_path / "students"), [rule], expected_dir=str(E))["s1"]
     assert row["R1_IoU_val"] == "AMBIGUOUS expected" and row["R1_IoU_score"] == 0.0
     assert row["R1_IoU_expected_path"].startswith("AMBIGUOUS")
+
+
+def test_unreadable_explicit_reference_is_reported_not_replaced(course):
+    """An explicitly loaded reference that cannot be read must not be replaced
+    silently by the reference found in the Expected Dir."""
+    bad = course / "broken_reference.png"; bad.write_text("not an image")
+    rule = {"output": "img1_stud.png", "metric": "IoU", "max_score": 1, "tolerances": "0.9", "mode": "bucket"}
+    row = run_batch(str(course / "students"), [rule], expected_dir=str(course / "expected"),
+                    expected_image=str(bad))["s_ok"]
+    assert row["R1_IoU_val"] == "UNREADABLE expected" and row["R1_IoU_score"] == 0.0

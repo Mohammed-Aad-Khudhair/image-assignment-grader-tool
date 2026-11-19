@@ -931,7 +931,10 @@ class BatchWorker(QThread):
                 # expected image
                 exp_img = None
                 expected_path, exp_status = "", "missing"
-                if explicit_expected is not None:
+                if self.expected_image_path:
+                    # an explicitly loaded reference is used for every rule; if it
+                    # cannot be read, the rules report it instead of falling back
+                    # to the Expected Dir
                     exp_img = explicit_expected
                     expected_path, exp_status = self.expected_image_path, "explicit"
                 else:

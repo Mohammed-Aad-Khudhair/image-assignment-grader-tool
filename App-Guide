@@ -137,7 +137,7 @@ When: the output must keep the reference resolution.
 Better: lower (0 = same size).
 Formula: max(|wA − wB|, |hA − hB|).
 Pixel-difference counter
-•	N_DIFF_PIXELS — counts pixels whose difference exceeds a per-pixel threshold.
+•	N_DIFF_PIXELS — counts pixels whose difference reaches or exceeds a per-pixel threshold.
 When: you want to “count mistakes”.
 Better: lower (fewer bad pixels).
 How to write:
@@ -270,7 +270,7 @@ File names
 •	Reference files in the Expected Dir may carry the suffix gt, ref, reference or expected, after _ or - (mask_gt.png, mask-reference.png). Two reference files with the same name (e.g. in two subfolders of the Expected Dir) are reported as AMBIGUOUS expected with 0 points.
 •	A rule with an unknown Mode or Aggregation, or a Max score that is not a number of 0 or more, is reported as ERROR with 0 points. Mode and Aggregation ignore upper and lower case (Bucket = bucket).
 Image size
-•	A student image of a different size is resized to the reference size (area interpolation) before comparison, and the CSV column R<n>_<metric>_resized is 1. Resizing smooths small errors, so if the output size is part of the task, add a SIZE rule (it compares the original sizes) or tell students the required size.
+•	A student image of a different size is resized to the reference size (area interpolation) before comparison, and the CSV column R<n>_<metric>_resized is 1. Resizing loses detail, so a smaller image usually scores lower; if the output size is part of the task, add a SIZE rule (it compares the original sizes) or tell students the required size.
 Formats
 •	Images: PNG, JPEG, BMP and TIFF; grey, colour, RGBA (alpha ignored) and 16-bit images are read. Masks: any of these; white (grey value above 127) = included.
 •	Console output: a text file written by the student's program (default stdout.txt). ImgGrader does not run student code; the files must already be in the student folders.
