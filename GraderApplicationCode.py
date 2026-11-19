@@ -326,13 +326,32 @@ FRIENDLY_METRICS = {
     "EXACT": "EXACT"
 }
 
+def check_rule_settings(max_score, mode="bucket", aggregation="mean"):
+    """Return (max_score, mode, aggregation) in normalised form. Raises
+    ValueError for a maximum score that is not a finite number >= 0, an
+    unknown scoring mode or an unknown aggregation, so such a rule is reported
+    as ERROR instead of being scored with a silent default."""
+    try:
+        m = float(max_score)
+    except (TypeError, ValueError):
+        raise ValueError(f"invalid max score '{max_score}'")
+    if not math.isfinite(m) or m < 0:
+        raise ValueError(f"invalid max score '{max_score}'")
+    md = str(mode if mode is not None else "").strip().lower() or "bucket"
+    if md not in ("bucket", "continuous"):
+        raise ValueError(f"unknown mode '{mode}'")
+    ag = str(aggregation if aggregation is not None else "").strip().lower() or "mean"
+    t = re.fullmatch(r"trim(\d{1,2})?", ag)
+    if not (ag in ("mean", "median", "max") or (t and int(t.group(1) or 10) < 50)):
+        raise ValueError(f"unknown aggregation '{aggregation}'")
+    return m, md, ag
+
 def compute_score(metric_name, value, max_score, tol_str, mode="bucket"):
     """Map a metric value to points. Raises ValueError if the tolerances are
-    missing or cannot be read, so a rule without valid thresholds never awards
-    points silently. EXACT without tolerances is pass/fail. The score always
-    lies in [0, max_score]."""
-    try: max_score = float(max_score)
-    except: max_score = 1.0
+    missing or cannot be read, or if the maximum score or the mode is invalid,
+    so such a rule never awards points silently. EXACT without tolerances is
+    pass/fail. The score always lies in [0, max_score]."""
+    max_score, mode, _ = check_rule_settings(max_score, mode)
     parts = [t.strip() for t in (tol_str or "").split(",") if t.strip() not in ("", "-", "\u2013", "\u2014")]
     try: tols = [float(t) for t in parts]
     except ValueError:
@@ -360,6 +379,14 @@ def compute_score(metric_name, value, max_score, tol_str, mode="bucket"):
         top = tols[-1]
         if top==0: return 0.0
         return max_score*max(0.0, 1.0 - value/top)
+
+CSV_SUFFIXES = ("_mask", "_student_path", "_expected_path", "_resized", "_val", "_score")
+
+def csv_column_order(key):
+    """Sort key for report columns: rule number, then the column's place in a rule."""
+    m = re.match(r"R(\d+)_", key)
+    n = int(m.group(1)) if m else 0
+    return n, next((i for i, sfx in enumerate(CSV_SUFFIXES) if key.endswith(sfx)), len(CSV_SUFFIXES))
 
 def map_expected_from_student(student_fname, expected_dir):
     name = os.path.basename(student_fname)
@@ -489,7 +516,7 @@ def aggregate_map(m, mode="mean"):
         mm = re.search(r"(\d+)", mode); ratio = 0.1
         if mm: ratio = int(mm.group(1))/100.0
         return _trimmed_mean(m, ratio)
-    return float(np.mean(m))
+    raise ValueError(f"unknown aggregation '{mode}'")
 
 def _cout_fields(rule):
     """(notes, tolerances) for the table from a JSON rule. An expected_cout
@@ -753,9 +780,11 @@ class BatchWorker(QThread):
     def _index_expected(self):
         if not self.expected_dir or self._exp_index_exact:
             return
+        # every path per file name, so identical names in different
+        # subfolders are reported as AMBIGUOUS instead of using the first one
         for root, _, files in os.walk(self.expected_dir):
             for fn in files:
-                self._exp_index_exact.setdefault(fn.lower(), os.path.join(root, fn))
+                self._exp_index_exact.setdefault(fn.lower(), []).append(os.path.join(root, fn))
 
     def _find_in_expected(self, key_name: str):
         """Return (path, status). status: 'exact', 'stem', 'missing' or
@@ -764,16 +793,18 @@ class BatchWorker(QThread):
             return "", "missing"
         name_lower = key_name.lower()
         if name_lower in self._exp_index_exact:
-            return self._exp_index_exact[name_lower], "exact"
+            return self._resolve_candidates(sorted(self._exp_index_exact[name_lower]), "exact",
+                                            root=self.expected_dir)
         if name_lower in self._exp_cache_fuzzy:
             return self._exp_cache_fuzzy[name_lower]
         # Reference files are often named e.g. H01_vessels_gt.png or
         # lesion_mask-reference.png, so common reference suffixes are ignored too.
         stem = self._strip_stud_suffix(name_lower).lower()
-        cands = sorted(full for fn_lower, full in self._exp_index_exact.items()
+        cands = sorted(full for fn_lower, fulls in self._exp_index_exact.items()
                        if fn_lower.endswith(IMG_EXTS)
-                       and self._strip_ref_suffix(fn_lower) == stem)
-        res = self._resolve_candidates(cands)
+                       and self._strip_ref_suffix(fn_lower) == stem
+                       for full in fulls)
+        res = self._resolve_candidates(cands, root=self.expected_dir)
         self._exp_cache_fuzzy[name_lower] = res
         return res
 
@@ -802,12 +833,13 @@ class BatchWorker(QThread):
         return res
 
     @staticmethod
-    def _resolve_candidates(cands, single_status="stem"):
+    def _resolve_candidates(cands, single_status="stem", root=None):
         if len(cands) == 1:
             return cands[0], single_status
         if not cands:
             return "", "missing"
-        return "", "AMBIGUOUS: " + " | ".join(os.path.basename(c) for c in cands)
+        name = (lambda c: os.path.relpath(c, root)) if root else os.path.basename
+        return "", "AMBIGUOUS: " + " | ".join(name(c) for c in cands)
 
     def _strip_ref_suffix(self, name: str) -> str:
         base = os.path.splitext(os.path.basename(name))[0]
@@ -862,6 +894,15 @@ class BatchWorker(QThread):
                 # (e.g. two N_DIFF_PIXELS rules on different ROIs) do not overwrite each other.
                 rk = f"R{ri}_{metric}"
 
+                try:
+                    max_score, mode, aggregation = check_rule_settings(max_score, mode, aggregation)
+                except ValueError as e:
+                    rowres[f"{rk}_val"] = f"ERROR: {e}"
+                    rowres[f"{rk}_score"] = 0.0
+                    step_done += 1
+                    self.progress.emit(int(step_done * 100 / steps), student_label)
+                    continue
+
                 if output.lower() == "cout":
                     val, cerr = console_rule(base, metric, tols, notes)
                     score = 0.0 if cerr else float(max_score) * (1.0 if val >= 1.0 else 0.0)
@@ -899,7 +940,12 @@ class BatchWorker(QThread):
                         expected_path = map_expected_from_student(probe_name, self.expected_dir)
                         if expected_path:
                             exp_status = "exact"
-                    if not expected_path and self.expected_dir and (output or stud_path):
+                            same = self._exp_index_exact.get(os.path.basename(expected_path).lower(), [])
+                            if len(same) > 1:   # same name also in a subfolder
+                                expected_path, exp_status = self._resolve_candidates(
+                                    sorted(same), root=self.expected_dir)
+                    if (not expected_path and not exp_status.startswith("AMBIGUOUS")
+                            and self.expected_dir and (output or stud_path)):
                         probe = output or (os.path.basename(stud_path) if stud_path else "")
                         expected_path, exp_status = self._find_in_expected(probe)
                     if expected_path:
@@ -1180,8 +1226,14 @@ class ImageGraderApp(QMainWindow):
             tol_item=self.table.item(row,3); mode_item=self.table.item(row,4); agg_item=self.table.item(row,5); notes_item=self.table.item(row,6)
             if not met_item: continue
             out = out_item.text().strip() if out_item else ""; metric=met_item.text().strip()
-            max_score=float(max_item.text()) if max_item else 1.0; tol=tol_item.text() if tol_item else ""; mode=mode_item.text() if mode_item else "bucket"
+            max_score=max_item.text() if max_item else 1.0; tol=tol_item.text() if tol_item else ""; mode=mode_item.text() if mode_item else "bucket"
             agg=agg_item.text().strip() if agg_item else ""; notes=notes_item.text().strip() if notes_item else ""
+            try:
+                max_score, mode, agg = check_rule_settings(max_score, mode, agg)
+            except ValueError as e:
+                msg = f"ERROR: {e}"
+                self.table.setItem(row,7,QTableWidgetItem(msg)); res.append(f"{metric}: {msg}")
+                continue
 
             if out.lower()=="cout":
                 if self.student_dir:
@@ -1242,7 +1294,7 @@ class ImageGraderApp(QMainWindow):
             rules.append({
                 "output": self.table.item(row,0).text() if self.table.item(row,0) else "",
                 "metric": self.table.item(row,1).text() if self.table.item(row,1) else "",
-                "max_score": float(self.table.item(row,2).text()) if self.table.item(row,2) else 1.0,
+                "max_score": self.table.item(row,2).text() if self.table.item(row,2) else 1.0,
                 "tolerances": self.table.item(row,3).text() if self.table.item(row,3) else "",
                 "mode": self.table.item(row,4).text() if self.table.item(row,4) else "bucket",
                 "aggregation": self.table.item(row,5).text() if self.table.item(row,5) else "mean",
@@ -1263,9 +1315,11 @@ class ImageGraderApp(QMainWindow):
         try: self.progress.setValue(100); self.progress.close()
         except: pass
         if results:
-            # Keep columns in rule order (R1..Rn), total_score last.
+            # Columns in rule order (R1..Rn) with a fixed order inside each rule,
+            # whichever student first produced a column; total_score last.
             keys=list(dict.fromkeys(k for r in results for k in r.keys()))
-            keys=["student"]+[k for k in keys if k not in ("student","total_score")]+["total_score"]
+            keys=["student"]+sorted((k for k in keys if k not in ("student","total_score")),
+                                    key=csv_column_order)+["total_score"]
             try:
                 with open(save_path,"w",newline="",encoding="utf-8") as f:
                     w=csv.DictWriter(f, fieldnames=keys); w.writeheader(); [w.writerow(r) for r in results]

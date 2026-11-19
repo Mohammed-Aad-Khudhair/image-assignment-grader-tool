@@ -111,6 +111,32 @@ def test_batch_csv_columns_follow_rule_order(g, qapp, tmp_path, monkeypatch):
 
 
 
+def test_csv_columns_stay_in_rule_order_when_first_student_misses_a_file(g, qapp, tmp_path, monkeypatch):
+    """The first student has no file for R1, so R1_resized first appears in a
+    later row; it must still be written inside R1's columns."""
+    exp = tmp_path / "expected"; exp.mkdir()
+    cv2.imwrite(str(exp / "a.png"), disk()); cv2.imwrite(str(exp / "b.png"), disk())
+    for name, files in (("s1", ["b.png"]), ("s2", ["a.png", "b.png"])):
+        d = tmp_path / "students" / name; d.mkdir(parents=True)
+        for fn in files:
+            cv2.imwrite(str(d / fn), disk(r=29))
+    rules = [{"output": fn, "metric": "MSE", "max_score": 1.0, "tolerances": "1,10",
+              "mode": "bucket", "aggregation": "mean", "notes": ""} for fn in ("a.png", "b.png")]
+    w = g.BatchWorker(str(tmp_path / "students"), str(exp), "", rules, None, "")
+    got = {}
+    w.finished.connect(lambda res: got.setdefault("res", res))
+    w.run()
+    monkeypatch.setattr(g.QMessageBox, "information", staticmethod(lambda *a, **k: None))
+    win = g.ImageGraderApp(); win.progress = None
+    out = tmp_path / "batch.csv"
+    win.on_batch_finished(got["res"], str(out))
+    header = out.read_text(encoding="utf-8").splitlines()[0].split(",")
+    assert header == ["student",
+                      "R1_MSE_mask", "R1_MSE_student_path", "R1_MSE_expected_path", "R1_MSE_resized", "R1_MSE_val", "R1_MSE_score",
+                      "R2_MSE_mask", "R2_MSE_student_path", "R2_MSE_expected_path", "R2_MSE_resized", "R2_MSE_val", "R2_MSE_score",
+                      "total_score"]
+
+
 def test_reset_all_clears_the_rules_text_box(g, qapp):
     win = g.ImageGraderApp()
     win.rules_text.setPlainText('[{"output": "a.png", "metric": "MSE"}]')

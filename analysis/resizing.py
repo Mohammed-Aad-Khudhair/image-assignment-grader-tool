@@ -10,7 +10,7 @@ reference size with area interpolation (cv2.INTER_AREA) before comparison.
    and score is compared with the full-size result.
    Output: results/resizing_case_studies.csv
 
-2. Interpolation methods. For the same smaller masks and for grey-level images
+2. Interpolation methods. For the same smaller masks and for colour photographs
    (test_kit/T02_perceptual), the image is scaled back with nearest, bilinear,
    bicubic and area interpolation and compared with the reference (IoU or MSE,
    SSIM). The change in the grey-level distribution caused by the round trip is

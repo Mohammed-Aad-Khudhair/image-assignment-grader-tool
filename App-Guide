@@ -267,7 +267,8 @@ File names
 •	Tell students the exact output file name, e.g. mask_stud.png, and give each student one folder (students/<name>/).
 •	ImgGrader looks for the exact name first (also in subfolders), then for the same name with or without a student suffix (_stud, _student, -stud, -student) and any image extension (.png, .jpg, .jpeg, .bmp, .tif, .tiff).
 •	If the exact name is not found and two files match (e.g. mask-stud.png and mask_student.png), the rule is reported as AMBIGUOUS with 0 points; no file is picked. A missing file is MISSING, an empty or damaged file is UNREADABLE. Check the CSV for these entries before publishing grades.
-•	Reference files in the Expected Dir may carry the suffix gt, ref, reference or expected, after _ or - (mask_gt.png, mask-reference.png).
+•	Reference files in the Expected Dir may carry the suffix gt, ref, reference or expected, after _ or - (mask_gt.png, mask-reference.png). Two reference files with the same name (e.g. in two subfolders of the Expected Dir) are reported as AMBIGUOUS expected with 0 points.
+•	A rule with an unknown Mode or Aggregation, or a Max score that is not a number of 0 or more, is reported as ERROR with 0 points. Mode and Aggregation ignore upper and lower case (Bucket = bucket).
 Image size
 •	A student image of a different size is resized to the reference size (area interpolation) before comparison, and the CSV column R<n>_<metric>_resized is 1. Resizing smooths small errors, so if the output size is part of the task, add a SIZE rule (it compares the original sizes) or tell students the required size.
 Formats

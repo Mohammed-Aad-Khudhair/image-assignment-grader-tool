@@ -74,15 +74,15 @@ All scripts use only OpenCV and NumPy (`make_rings.py` also scikit-image). Run t
   - S2: under-segmentation, erosion with a 3×3 elliptical element until IoU ≤ 0.986.
   - S3: over-segmentation, dilation until IoU ≤ 0.977.
   - S4: clearly wrong, shifted by (9, −6) pixels and eroded 3 times.
-- `make_ring_and_overlays.py` writes the border band `masks/roi_border.png` (dilation minus erosion of the reference, 3×3 elliptical element, 4 iterations, about 8 px wide) and overlay figures in `figures/`.
+- `make_ring_and_overlays.py` writes the border band `masks/roi_border.png` (dilation minus erosion of the reference, 3×3 square element, 4 iterations, about 8 px wide) and overlay figures in `figures/`.
 
 **HRF** (`hrf/`)
 
 - `make_rings.py` writes, for every `<ID>_vessels_gt.png`, the centre-line band (skeleton dilated by radius 2, inside the field of view) and the background band (between 3 and 7 px from the vessels, inside the field of view).
 - `make_students.py` writes `students/s1` … `s4` for every image:
   - s1: almost correct, closing, light smoothing and thresholding.
-  - s2: under-segmentation, thin vessels removed by opening until IoU (in the field of view) ≤ 0.955.
-  - s3: over-segmentation, dilation until IoU ≤ 0.935.
+  - s2: under-segmentation, thin vessels removed by an opening followed by one erosion (3×3 elliptical element).
+  - s3: over-segmentation, one dilation with the same element.
   - s4: clearly wrong, shifted by (10, −7) pixels and eroded twice with a 5×5 element.
 
 ## Sources and licences

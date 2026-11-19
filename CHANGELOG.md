@@ -10,10 +10,11 @@
 - Identical images (PSNR = infinity) receive full points instead of 0.
 - Objects and Holes are miscounts against the reference (lower is better), as documented; Holes no longer counts the outer background.
 - ContoursStrict counts objects that lie inside another object's hole.
-- Batch CSV columns follow the rule order (R1, R2, …, total_score); they were previously sorted alphabetically.
+- Batch CSV columns follow the rule order (R1, R2, …, total_score); they were previously sorted alphabetically. The order also holds when the first student has a missing file.
+- An unknown scoring mode or aggregation, or a max score that is not a number of 0 or more, is reported as `ERROR` with 0 points. Previously an unknown mode was scored as continuous, an unknown aggregation as the mean, an unreadable max score as 1, and a negative max score gave negative points. Mode and aggregation names ignore case.
 
 ### Fixed – files, masks and console output
-- File matching: exact name first, then the same name without student suffixes (`_stud`, `_student`) and reference suffixes (`_gt`, `-reference`, `_ref`, `_expected`). Several candidates are reported as `AMBIGUOUS` with 0 points instead of picking one.
+- File matching: exact name first, then the same name without student suffixes (`_stud`, `_student`) and reference suffixes (`_gt`, `-reference`, `_ref`, `_expected`). Several candidates are reported as `AMBIGUOUS` with 0 points instead of picking one; this includes reference files with the same name in different subfolders of the Expected Dir.
 - Missing, unreadable and ambiguous student or reference files are reported separately in the CSV.
 - File paths in the CSV are written in one normalised form (on Windows always with backslashes), whether they come from a file dialog, a rule file or the Expected Dir lookup.
 - Importing rules no longer turns one rule's mask into a global mask, and loading a global mask no longer overwrites a rule's own `mask=`.
@@ -35,7 +36,7 @@
 - Removed a deprecated Qt call (`exec_`) that printed a warning when a batch started.
 
 ### Added
-- `tests/`: 59 automated tests (`python -m pytest tests`).
+- `tests/`: 67 automated tests (`python -m pytest tests`).
 - `case_studies/`: the ISIC lesion and HRF vessel case studies with images, masks, synthetic student submissions, rule files, exact results and the scripts that reproduce them (replaces the top-level `rules.json`, which was not valid JSON).
 - `analysis/`: sensitivity of scores to tolerances, scoring mode, resizing and aggregation, and batch runtime and memory, with scripts and results.
 - `test_kit/`: a synthetic class (9 tasks, 69 students, 459 results with independently computed answers) for checking that ImgGrader grades correctly.

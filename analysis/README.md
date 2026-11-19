@@ -45,7 +45,7 @@ Results: no rule score and no total increased. Lower-resolution submissions lost
 **Interpolation methods.** ISIC students S2–S4 (IoU) and four test-kit T02 images (`perfect`, `noise_sigma5`, `jpeg_q20`, `blur_sigma1`; MSE) are reduced to 50 % and 25 % and scaled back with nearest, bilinear, bicubic and area interpolation. The file lists the metric and SSIM before and after, and the chi-square distance between the grey-level histograms of the original-size and the round-trip image, `χ² = ½ Σ (p − q)² / (p + q)` (0 = identical distributions, 1 = disjoint).
 
 Results:
-- When the reference size is an exact multiple of the student's size (all T02 cases), area interpolation gives the same image as nearest-neighbour: it repeats pixels and does not smooth. For the grey-level images MSE grows and SSIM falls with every method (e.g. the perfect T02 image at 50 %: MSE 0 → 218.8, SSIM 1 → 0.785). The smoothing methods (bilinear, bicubic) give lower MSE than area, so they would hide more of the lost detail.
+- When the reference size is an exact multiple of the student's size (all T02 cases), area interpolation gives the same image as nearest-neighbour: it repeats pixels and does not smooth. For the photographs MSE grows and SSIM falls with every method (e.g. the perfect T02 image at 50 %: MSE 0 → 218.8, SSIM 1 → 0.785). The smoothing methods (bilinear, bicubic) give lower MSE than area, so they would hide more of the lost detail.
 - The histogram distances are small (χ² ≤ 0.021 in all cases; ≤ 0.008 for area interpolation): resizing hardly changes the distribution of grey levels, so the score change comes from the lost detail, not from a shift in intensities.
 
 ## realistic_tasks.py

@@ -226,3 +226,37 @@ def test_console_rule_without_expected_text_is_an_error(g, tmp_path, mode):
     row = run_batch(str(tmp_path / "students"), [rule])["s1"]
     assert row[f"R1_{mode}_score"] == 0.0 and row["total_score"] == 0.0
     assert row[f"R1_{mode}_val"] == "ERROR: no expected text set"
+
+
+@pytest.mark.parametrize("field,value", [("mode", "bucketz"), ("aggregation", "avg"),
+                                         ("max_score", "abc"), ("max_score", -2)])
+def test_invalid_mode_aggregation_or_max_score_is_reported(course, field, value):
+    """No silent defaults: an unknown mode or aggregation, or an unusable
+    maximum score, is an ERROR with 0 points, not a score."""
+    rule = {"output": "img1_stud.png", "metric": "MSE", "max_score": 2, "tolerances": "1,10",
+            "mode": "bucket", "aggregation": "mean"}
+    rule[field] = value
+    row = run_batch(str(course / "students"), [rule], expected_dir=str(course / "expected"))["s_left"]
+    assert str(row["R1_MSE_val"]).startswith("ERROR") and row["R1_MSE_score"] == 0.0
+
+
+def test_mode_and_aggregation_ignore_case(course):
+    base = {"output": "img1_stud.png", "metric": "MSE", "max_score": 2, "tolerances": "100,1000"}
+    lower = run_batch(str(course / "students"), [dict(base, mode="bucket", aggregation="median")],
+                      expected_dir=str(course / "expected"))["s_left"]
+    upper = run_batch(str(course / "students"), [dict(base, mode="Bucket", aggregation="Median")],
+                      expected_dir=str(course / "expected"))["s_left"]
+    assert upper["R1_MSE_val"] == lower["R1_MSE_val"] and upper["R1_MSE_score"] == lower["R1_MSE_score"]
+
+
+@pytest.mark.parametrize("layout", ["two_subfolders", "top_and_subfolder"])
+def test_same_reference_name_in_two_places_is_ambiguous(tmp_path, layout):
+    E = tmp_path / "expected"; S = tmp_path / "students" / "s1"; S.mkdir(parents=True)
+    first = E / "a" if layout == "two_subfolders" else E
+    for d in (first, E / "b"):
+        d.mkdir(parents=True, exist_ok=True); cv2.imwrite(str(d / "img.png"), disk())
+    cv2.imwrite(str(S / "img.png"), disk())
+    rule = {"output": "img.png", "metric": "IoU", "max_score": 1, "tolerances": "0.9", "mode": "bucket"}
+    row = run_batch(str(tmp_path / "students"), [rule], expected_dir=str(E))["s1"]
+    assert row["R1_IoU_val"] == "AMBIGUOUS expected" and row["R1_IoU_score"] == 0.0
+    assert row["R1_IoU_expected_path"].startswith("AMBIGUOUS")
