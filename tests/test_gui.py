@@ -55,8 +55,8 @@ def test_global_mask_does_not_overwrite_rule_masks(g, qapp):
     g.ensure_mask_in_notes(win.table, "fov.png")
     notes = [win.table.item(r, 6).text() for r in range(3)]
     assert notes[0] == "gray=1; mask=cl_ring.png"           # own mask kept
-    assert notes[1] == "gray=1,mask=fov.png"
-    assert notes[2] == "mask=fov.png"
+    assert notes[1] == 'gray=1,mask="fov.png"'           # quoted: paths may contain , or ;
+    assert notes[2] == 'mask="fov.png"'
 
 
 def test_rectangle_roi_is_scaled_to_full_image(g, qapp, tmp_path):
@@ -215,6 +215,25 @@ def test_cancel_stops_the_batch_without_a_report(g, qapp, tmp_path):
     rule = {"output": "img.png", "metric": "SIZE", "max_score": 1, "tolerances": "0", "mode": "bucket",
             "notes": "100x100"}
     w = g.BatchWorker(str(S), "", "", [rule], None, "")
+    got = []
+    w.finished.connect(lambda res: got.append(res), g.Qt.DirectConnection)
+    w.progress.connect(lambda *a: w.requestInterruption(), g.Qt.DirectConnection)
+    w.start(); w.wait(10000)
+    assert got == [None]
+
+
+def test_student_picker_skips_hidden_and_zip_folders(g, qapp, tmp_path):
+    for n in (".git", "__MACOSX", "alice"):
+        (tmp_path / n).mkdir()
+    win = g.ImageGraderApp(); win.student_dir = str(tmp_path); win.refresh_student_list()
+    assert [win.student_picker.itemText(i) for i in range(win.student_picker.count())] == ["alice"]
+
+
+def test_cancel_during_the_last_student_writes_no_report(g, qapp, tmp_path):
+    d = tmp_path / "students" / "s1"; d.mkdir(parents=True); cv2.imwrite(str(d / "img.png"), disk())
+    rules = [{"output": "img.png", "metric": "SIZE", "max_score": 1, "tolerances": "0", "mode": "bucket",
+              "notes": "100x100"}] * 3
+    w = g.BatchWorker(str(tmp_path / "students"), "", "", rules, None, "")
     got = []
     w.finished.connect(lambda res: got.append(res), g.Qt.DirectConnection)
     w.progress.connect(lambda *a: w.requestInterruption(), g.Qt.DirectConnection)

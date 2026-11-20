@@ -355,3 +355,62 @@ def test_duplicate_student_files_are_listed_with_their_folders(tmp_path):
     row = run_batch(str(S), [rule])["s1"]
     assert row["R1_SIZE_val"] == "AMBIGUOUS student"
     assert os.path.join("backup", "m_stud.png") in row["R1_SIZE_student_path"]
+
+
+def test_blank_output_repeats_the_previous_rule_including_a_missing_file(tmp_path):
+    E = tmp_path / "expected"; E.mkdir()
+    cv2.imwrite(str(E / "a.png"), disk()); cv2.imwrite(str(E / "b.png"), disk())
+    S = _one_student(tmp_path, {"a_stud.png": disk()})          # b_stud.png not handed in
+    rules = [{"output": out, "metric": "IoU", "max_score": 1, "tolerances": "0.9", "mode": "bucket"}
+             for out in ("a_stud.png", "b_stud.png", "")]
+    row = run_batch(str(S), rules, expected_dir=str(E))["s1"]
+    assert row["R1_IoU_score"] == 1.0
+    assert row["R2_IoU_val"] == "MISSING student" and row["R3_IoU_val"] == "MISSING student"
+    assert row["R3_IoU_score"] == 0.0
+
+
+def test_exact_reference_name_next_to_a_suffixed_reference_is_ambiguous(tmp_path):
+    E = tmp_path / "expected"; E.mkdir()
+    cv2.imwrite(str(E / "photo.png"), disk(r=10)); cv2.imwrite(str(E / "photo_gt.png"), disk())
+    S = _one_student(tmp_path, {"photo.png": disk(r=10)})
+    rule = {"output": "photo.png", "metric": "IoU", "max_score": 1, "tolerances": "0.9", "mode": "bucket"}
+    row = run_batch(str(S), [rule], expected_dir=str(E))["s1"]
+    assert row["R1_IoU_val"] == "AMBIGUOUS expected" and row["R1_IoU_score"] == 0.0
+
+
+def test_size_without_reference_reads_only_an_explicit_size(tmp_path):
+    S = _one_student(tmp_path, {"img.png": disk(h=48, w=64)})
+    rule = {"output": "img.png", "metric": "SIZE", "max_score": 1, "tolerances": "0", "mode": "bucket",
+            "notes": "mask=masks/roi_64x48.png"}
+    assert run_batch(str(S), [rule])["s1"]["R1_SIZE_val"] == "MISSING expected"
+    for notes in ("64x48", "size=64x48", "expect_w=64; expect_h=48"):
+        rule["notes"] = notes
+        assert run_batch(str(S), [rule])["s1"]["R1_SIZE_score"] == 1.0
+
+
+@pytest.mark.parametrize("thr", ["0.5", "-5", "abc"])
+def test_invalid_thr_in_notes_is_an_error(tmp_path, thr):
+    E = tmp_path / "expected"; E.mkdir(); cv2.imwrite(str(E / "img.png"), disk())
+    S = _one_student(tmp_path, {"img.png": disk()})
+    rule = {"output": "img.png", "metric": "N_DIFF_PIXELS", "max_score": 1, "tolerances": "0,10",
+            "mode": "bucket", "notes": f"thr={thr}"}
+    row = run_batch(str(S), [rule], expected_dir=str(E))["s1"]
+    assert str(row["R1_N_DIFF_PIXELS_val"]).startswith("ERROR") and row["R1_N_DIFF_PIXELS_score"] == 0.0
+
+
+def test_console_file_without_bom_or_in_other_case(tmp_path):
+    S = _one_student(tmp_path, {"STDOUT.TXT": "Result: 42\n".encode("utf-16-le")})
+    rule = {"output": "cout", "metric": "contains", "max_score": 1, "tolerances": "Result: 42", "mode": "bucket"}
+    assert str(run_batch(str(S), [rule])["s1"]["R1_contains_val"]).startswith("UNREADABLE")
+    (S / "s1" / "STDOUT.TXT").write_bytes(b"Result: 42\n")
+    assert run_batch(str(S), [rule])["s1"]["R1_contains_score"] == 1.0
+
+
+def test_global_mask_path_with_a_comma(g, qapp, tmp_path):
+    d = tmp_path / "Grading, 2025"; d.mkdir()
+    m = np.zeros((100, 100), np.uint8); m[20:80, 20:80] = 255; cv2.imwrite(str(d / "roi.png"), m)
+    win = g.ImageGraderApp()
+    win.table.insertRow(0); win.table.setItem(0, 0, g.QTableWidgetItem("img.png"))
+    win.table.setItem(0, 6, g.QTableWidgetItem("gray=1"))
+    g.ensure_mask_in_notes(win.table, str(d / "roi.png"))
+    assert g.extract_mask_from_notes(win.table.item(0, 6).text()) == str(d / "roi.png")

@@ -132,7 +132,7 @@ Better: higher if counts match (1), else 0.
 •	ContoursStrict — hierarchy-aware shape similarity (holes per object).
 When: stricter boundary/topology comparison.
 Better: higher (0..1).
-•	SIZE — size check: largest difference in width or height, in pixels (the student image is not resized for this rule).
+•	SIZE — size check: largest difference in width or height, in pixels (the student image is not resized for this rule). Without a reference image, the expected size can be given in Notes as WxH (e.g. 640x480), size=WxH or expect_w=…; expect_h=….
 When: the output must keep the reference resolution.
 Better: lower (0 = same size).
 Formula: max(|wA − wB|, |hA − hB|).
@@ -196,6 +196,7 @@ ________________________________________
 7) Keywords / Notes (advanced options)
 These are commands (not just comments) that alter behavior:
 •	file=stdout.txt — for cout rules: which file to read (default stdout.txt).
+•	thr=10 — for N_DIFF_PIXELS: per-pixel threshold, a whole number of grey levels (anything else is reported as ERROR).
 •	logic=any / logic=all — for N_DIFF_PIXELS per-pixel decision:
 • any → a pixel is bad if any channel is ≥ τ (looser; default).
 • all → a pixel is bad only if all channels are ≥ τ (stricter).
@@ -245,7 +246,7 @@ Output=cout, Metric=exact, Tolerance(s)=full expected text,
 •	Notes=file=stdout.txt.
 ________________________________________
 11) Troubleshooting
-•	“No images loaded” → load both Expected & Student images before Single Eval.
+•	“Load both expected and student image to run single evaluation.” → load both preview images before Run Single Eval (needed as soon as the table contains an image rule).
 •	“No student dir/image for cout” → set Student Dir and pick a Current Student.
 •	cout exact fails → paste the exact expected text (including newlines) into Tolerance(s); set file=… if needed.
 •	“ERROR: no expected text set” → a cout rule has an empty Tolerance(s); type the expected text, snippet or regex there (an empty text would match any output, so it is never scored).
@@ -266,6 +267,8 @@ Bucket or continuous?
 File names
 •	Tell students the exact output file name, e.g. mask_stud.png, and give each student one folder (students/<name>/).
 •	ImgGrader looks for the exact name first (also in subfolders), then for the same name with or without a student suffix (_stud, _student, -stud, -student) and any image extension (.png, .jpg, .jpeg, .bmp, .tif, .tiff).
+•	A file found by its name without the student suffix is accepted as the submission (mask.png for mask_stud.png). Keep handed-out input images out of the student folders, or the input itself may be graded when a student's output is missing; the CSV column R<n>_<metric>_student_path shows which file was used.
+•	An empty Output repeats the previous image rule: the same file and the same status (a MISSING file stays MISSING).
 •	If two files match (e.g. mask-stud.png and mask_student.png, or the exact name in two subfolders), the rule is reported as AMBIGUOUS with 0 points and the CSV lists the candidates; no file is picked. A missing file is MISSING, an empty or damaged file is UNREADABLE. Check the CSV for these entries before publishing grades.
 •	Reference files in the Expected Dir may carry the suffix gt, ref, reference or expected, after _ or - (mask_gt.png, mask-reference.png). Two candidate references (e.g. the same name in two subfolders, or photo.png and photo_gt.png for photo_stud.png) are reported as AMBIGUOUS expected with 0 points; keep input images out of the Expected Dir or give them a different name.
 •	A rule with an unknown Mode or Aggregation, or a Max score that is not a number of 0 or more, is reported as ERROR with 0 points. Mode and Aggregation ignore upper and lower case (Bucket = bucket).
@@ -273,7 +276,7 @@ Image size
 •	A student image of a different size is resized to the reference size (area interpolation) before comparison, and the CSV column R<n>_<metric>_resized is 1. Resizing loses detail, so a smaller image usually scores lower; if the output size is part of the task, add a SIZE rule (it compares the original sizes) or tell students the required size.
 Formats
 •	Images: PNG, JPEG, BMP and TIFF; grey, colour, RGBA (alpha ignored) and 16-bit images are read. Masks: any of these; white (grey value above 127) = included.
-•	Console output: a text file written by the student's program (default stdout.txt). ImgGrader does not run student code; the files must already be in the student folders. UTF-8 (with or without BOM) and UTF-16 with BOM (the default of > redirection in Windows PowerShell 5.1) are read; a file in another encoding is reported as UNREADABLE.
+•	Console output: a text file written by the student's program (default stdout.txt). ImgGrader does not run student code; the files must already be in the student folders. UTF-8 (with or without BOM) and UTF-16 with BOM (the default of > redirection in Windows PowerShell 5.1) are read; a file in another encoding is reported as UNREADABLE. The file name ignores upper/lower case, as for images.
 •	Folders whose names start with . or __ (e.g. .git, __MACOSX from zip files) are not treated as students.
 Limitations
 •	Each rule compares the student's output with one reference. If several different outputs are correct, use tolerant metrics and bands (e.g. IoU or SSIM instead of EXACT) that every correct output reaches.

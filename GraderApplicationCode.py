@@ -203,8 +203,11 @@ def parse_ndiff_params(tol_str, notes):
             tol_clean = ",".join(parts)
 
     if notes:
-        m = re.search(r"thr\s*=\s*(\d+)", notes, re.I)
-        if m: thr = int(m.group(1))
+        m = re.search(r"thr\s*=\s*([^,;\s]+)", notes, re.I)
+        if m:
+            if not re.fullmatch(r"\d+", m.group(1)):
+                raise ValueError(f"invalid thr '{m.group(1)}' (use a whole number of grey levels)")
+            thr = int(m.group(1))
         m = re.search(r"logic\s*=\s*(any|all)", notes, re.I)
         if m: logic = m.group(1).lower()
         m = re.search(r"(gray|grey)\s*=\s*([01]|true|false)", notes, re.I)
@@ -221,9 +224,16 @@ def read_console_text(student_dir, rule_notes):
     """Return (text, status); status is None, "MISSING" or "UNREADABLE".
     UTF-8 (with or without BOM) and UTF-16 with BOM (e.g. PowerShell
     redirection) are read; other encodings are reported, never a silent 0."""
-    p = os.path.join(student_dir, console_file_name(rule_notes))
+    name = console_file_name(rule_notes)
+    p = os.path.join(student_dir, name)
     if not os.path.isfile(p):
-        return None, "MISSING"
+        # the same name in other upper/lower case, as for image files
+        hits = [f for f in (os.listdir(student_dir) if os.path.isdir(student_dir) else [])
+                if f.lower() == os.path.basename(name).lower()
+                and os.path.isfile(os.path.join(student_dir, os.path.dirname(name), f))]
+        if len(hits) != 1:
+            return None, "AMBIGUOUS" if hits else "MISSING"
+        p = os.path.join(student_dir, os.path.dirname(name), hits[0])
     try:
         with open(p, "rb") as f:
             data = f.read()
@@ -231,6 +241,8 @@ def read_console_text(student_dir, rule_notes):
             text = data.decode("utf-16")
         else:
             text = data.decode("utf-8-sig")
+        if "\x00" in text:          # e.g. UTF-16 without byte-order mark
+            return None, "UNREADABLE"
         # Windows (\r\n) and old Mac (\r) line endings read as \n, as in text mode
         return text.replace("\r\n", "\n").replace("\r", "\n"), None
     except Exception:
@@ -255,6 +267,8 @@ def console_rule(student_dir, metric, tols, notes):
         fname = console_file_name(notes)
         if status == "UNREADABLE":
             return None, f"UNREADABLE {fname} (not UTF-8 or UTF-16 text)"
+        if status == "AMBIGUOUS":
+            return None, f"AMBIGUOUS {fname} (several files differ only in upper/lower case)"
         return None, f"MISSING {fname}"
     try:
         return console_compare(txt, expected_cout_text(tols, notes), (metric or "exact").lower()), None
@@ -412,12 +426,13 @@ def parse_expected_size_any(notes, tols):
     if ew and eh:
         try: return int(float(ew)), int(float(eh))
         except: pass
-    # also accept a WxH pair anywhere in notes or tolerances
-    blob = f"{notes or ''} {tols or ''}"
-    m = re.search(r"(\d+)\s*[xX]\s*(\d+)", blob)
-    if m:
-        try: return int(m.group(1)), int(m.group(2))
-        except: pass
+    # a notes entry that is exactly WxH (or size=WxH); a WxH inside another
+    # value, e.g. a mask file name, is not a size
+    size = nd.get("size", "")
+    for tok in [size] + re.split(r"[,;]", notes or ""):
+        m = re.fullmatch(r"\s*(\d+)\s*[xX]\s*(\d+)\s*", tok or "")
+        if m:
+            return int(m.group(1)), int(m.group(2))
     return None, None
 
 # ------------------ UI: Add Rule ------------------
@@ -634,7 +649,7 @@ def ensure_mask_in_notes(table, mask_path):
         txt = (item.text() if item else "").strip()
         if extract_mask_from_notes(txt):
             continue
-        txt = f"{txt},mask={mask_path}" if txt else f"mask={mask_path}"
+        txt = f'{txt},mask="{mask_path}"' if txt else f'mask="{mask_path}"'
         if item:
             item.setText(txt)
         else:
@@ -806,7 +821,15 @@ class BatchWorker(QThread):
             return "", "missing"
         name_lower = key_name.lower()
         if name_lower in self._exp_index_exact:
-            return self._resolve_candidates(sorted(self._exp_index_exact[name_lower]), "exact",
+            # photo.png (e.g. the input image) next to photo_gt.png (the reference):
+            # both are candidates, so the rule is AMBIGUOUS instead of a guess
+            stem = self._strip_stud_suffix(name_lower).lower()
+            suffixed = [full for fn_lower, fulls in self._exp_index_exact.items()
+                        if fn_lower.endswith(IMG_EXTS) and fn_lower != name_lower
+                        and self._strip_ref_suffix(fn_lower) == stem
+                        and os.path.splitext(fn_lower)[0] != stem
+                        for full in fulls]
+            return self._resolve_candidates(sorted(self._exp_index_exact[name_lower] + suffixed), "exact",
                                             root=self.expected_dir)
         if name_lower in self._exp_cache_fuzzy:
             return self._exp_cache_fuzzy[name_lower]
@@ -897,8 +920,9 @@ class BatchWorker(QThread):
             rowres = {"student": student_label}
             total_score = 0.0
 
-            # remember last resolved student path to support blank Output
-            last_stud_path = None
+            # a blank Output repeats the previous image rule: same name, same
+            # resolved file and the same status (a MISSING file stays MISSING)
+            last_out, last_stud = "", ("", "missing")
 
             for ri, rule in enumerate(self.rules, 1):
                 output = (rule.get("output") or "").strip()
@@ -937,13 +961,13 @@ class BatchWorker(QThread):
                 mask_path_to_use = resolve_path(mask_spec, self.rules_base_dir) if mask_spec else ""
                 rowres[f"{rk}_mask"] = csv_path(mask_path_to_use) or (f"MISSING: {mask_spec}" if mask_spec else "")
 
-                # student file: use specified output; if blank, reuse last
+                # student file: use specified output; if blank, repeat the previous rule
                 if output:
                     stud_path, stud_status = self._find_student_file(base, output)
+                    last_out, last_stud = output, (stud_path, stud_status)
                 else:
-                    stud_path, stud_status = (last_stud_path or ""), "reused"
-                if stud_path:
-                    last_stud_path = stud_path
+                    output = last_out
+                    stud_path, stud_status = last_stud
                 rowres[f"{rk}_student_path"] = csv_path(stud_path) or stud_status
 
                 # expected image
@@ -1047,6 +1071,9 @@ class BatchWorker(QThread):
             rowres["total_score"] = total_score
             results.append(rowres)
 
+        if self.isInterruptionRequested():   # Cancel pressed during the last student
+            self.finished.emit(None)
+            return
         self.finished.emit(results)
 
 # ------------------ Main Window ------------------
@@ -1141,7 +1168,8 @@ class ImageGraderApp(QMainWindow):
         self.student_picker.clear()
         subs=[]
         if self.student_dir and os.path.isdir(self.student_dir):
-            subs = sorted([n for n in os.listdir(self.student_dir) if os.path.isdir(os.path.join(self.student_dir, n))])
+            subs = sorted([n for n in os.listdir(self.student_dir) if os.path.isdir(os.path.join(self.student_dir, n))
+                           and not n.startswith((".", "__"))])
         if subs: self.student_picker.addItems(subs)
         else: self.student_picker.addItem("(no subfolders)")
 

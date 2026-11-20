@@ -15,18 +15,21 @@
 - An unknown scoring mode or aggregation, or a max score that is not a number of 0 or more, is reported as `ERROR` with 0 points. Previously an unknown mode was scored as continuous, an unknown aggregation as the mean, an unreadable max score as 1, and a negative max score gave negative points. Mode and aggregation names ignore case.
 
 ### Fixed – files, masks and console output
-- File matching: exact name first, then the same name without student suffixes (`_stud`, `_student`) and reference suffixes (`_gt`, `-reference`, `_ref`, `_expected`). Several candidates are reported as `AMBIGUOUS` with 0 points instead of picking one; this includes reference files with the same name in different subfolders of the Expected Dir, and a reference that matches both by exact name and by stem (e.g. photo.png and photo_gt.png for photo_stud.png). Reference lookup ignores case on every operating system. For students, candidates are listed with their subfolder.
+- File matching: exact name first, then the same name without student suffixes (`_stud`, `_student`) and reference suffixes (`_gt`, `-reference`, `_ref`, `_expected`). Several candidates are reported as `AMBIGUOUS` with 0 points instead of picking one; this includes reference files with the same name in different subfolders of the Expected Dir, and a reference that matches both by exact name and by stem (e.g. photo.png and photo_gt.png for photo_stud.png or photo.png). Reference lookup ignores case on every operating system. For students, candidates are listed with their subfolder.
 - Missing, unreadable and ambiguous student or reference files are reported separately in the CSV. An explicitly loaded reference image that cannot be read is reported as `UNREADABLE expected` for every rule instead of being replaced by references from the Expected Dir.
 - File paths in the CSV are written in one normalised form (on Windows always with backslashes), whether they come from a file dialog, a rule file or the Expected Dir lookup.
 - Importing rules no longer turns one rule's mask into a global mask, and loading a global mask no longer overwrites a rule's own `mask=`.
 - Relative mask paths are read from the folder of the imported rule file; a missing mask is an error instead of an unmasked evaluation.
 - The student image is resized to the reference size (area interpolation) before masking; this fixes a crash on size mismatch with a mask. The `resized` column records it.
-- Console rules: a missing output file or an invalid regular expression is reported instead of a silent 0; expected text containing commas is no longer cut. Output files in UTF-8 with BOM or UTF-16 (PowerShell redirection) are read; other encodings are reported as `UNREADABLE`. `file=` and `mask=` in the notes are read with the same parser as the rest of the notes (case-insensitive keys, quoted values).
+- An empty Output repeats the previous image rule with its status, so a missing file stays MISSING instead of an earlier file being graded.
+- SIZE without a reference reads only an explicit size from the notes (WxH, size=WxH, expect_w/expect_h), never a number pair inside a file name; `thr=` must be a whole number, otherwise the rule is an `ERROR`.
+- Console rules: a missing output file or an invalid regular expression is reported instead of a silent 0; expected text containing commas is no longer cut. Output files in UTF-8 with BOM or UTF-16 with BOM (PowerShell redirection) are read; other encodings, including UTF-16 without BOM, are reported as `UNREADABLE`, and the file name ignores case. `file=` and `mask=` in the notes are read with the same parser as the rest of the notes (case-insensitive keys, quoted values).
 - A console rule without expected text is reported as an error with 0 points. Previously `contains` and `regex` rules with an empty text gave full points for any output (rules drafted by Scan Assignment Folder have no expected text until it is filled in).
 - Images on paths with non-ASCII characters (e.g. accented folder names on Windows) are read and written correctly.
 - The rectangle ROI drawing dialog is restored.
 - Run Single Eval evaluates image rules also when the table contains a console rule.
-- Cancel stops a batch evaluation (no CSV is written), and a second batch cannot be started while one is running.
+- Cancel stops a batch evaluation (no CSV is written, also during the last student), and a second batch cannot be started while one is running.
+- A loaded global mask is written into the notes in quotes, so its path may contain commas or semicolons; the Current Student list skips `.git`/`__MACOSX` folders like the batch.
 - Rule files and the rules text box are checked before the table is changed; numeric tolerances import as text; a non-numeric max score no longer breaks Export Rules or Refresh Text; exported rule files no longer contain old results.
 - Folders starting with `.` or `__` (e.g. `.git`, `__MACOSX`) are not treated as students; the image file dialogs accept BMP and TIFF.
 
@@ -41,7 +44,7 @@
 - Removed a deprecated Qt call (`exec_`) that printed a warning when a batch started.
 
 ### Added
-- `tests/`: 80 automated tests (`python -m pytest tests`).
+- `tests/`: 90 automated tests (`python -m pytest tests`).
 - `case_studies/`: the ISIC lesion and HRF vessel case studies with images, masks, synthetic student submissions, rule files, exact results and the scripts that reproduce them (replaces the top-level `rules.json`, which was not valid JSON).
 - `analysis/`: sensitivity of scores to tolerances, scoring mode, resizing and aggregation, and batch runtime and memory, with scripts and results.
 - `test_kit/`: a synthetic class (9 tasks, 69 students, 459 results with independently computed answers) for checking that ImgGrader grades correctly.

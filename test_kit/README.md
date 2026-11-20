@@ -59,7 +59,7 @@ A result matches if the value differs from the correct value by at most 0.1 % (a
 | **T06_roi** | 4 | 52 | Per-rule masks (left/right half, circle), masks at half resolution, and empty, missing or damaged masks, which must give ERROR and 0 points. |
 | **T07_files_formats** | 17 | 51 | Finding student and reference files: reference named `*_gt.png`; student files named `_student`, `-stud`, saved as JPEG, two candidate files (`AMBIGUOUS student`), a similar but wrong name (`photo10_stud.png` → `MISSING student`), missing, damaged and empty files (`UNREADABLE student`); grey, RGBA and 16-bit images; wrong image size (resizing, SIZE); a file in a subfolder; Hungarian letters and spaces in folder names. |
 | **T08_console** | 9 | 63 | Console rules `exact`, `contains`, `regex`: two-line text, extra spaces and empty lines, Windows line endings, an extra debug line, a wrong number, text with a comma, Hungarian text, empty output, missing output file, `file=log.txt`, and an invalid regular expression (ERROR). |
-| **T09_rule_files** | 2 | 16 | Faulty or unusual rules: decimal max score (1.5), the same metric twice, an unknown metric name, empty or invalid tolerances and “—” (ERROR, 0 points), EXACT with “—” (pass/fail), an empty Output field (re-uses the file of the previous rule). |
+| **T09_rule_files** | 2 | 16 | Faulty or unusual rules: decimal max score (1.5), the same metric twice, an unknown metric name, empty or invalid tolerances and “—” (ERROR, 0 points), EXACT with “—” (pass/fail), an empty Output field (repeats the previous rule: same file and status). |
 | **Total** | **69** | **459** | |
 
 ## Single Eval spot checks
