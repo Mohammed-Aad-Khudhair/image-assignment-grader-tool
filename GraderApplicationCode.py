@@ -1,4 +1,4 @@
-import sys, os, csv, json, math, re, tempfile
+import sys, os, csv, json, math, re
 import numpy as np
 import cv2
 
@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QFileDialog, QTableWidget, QTableWidgetItem,
     QHeaderView, QDialog, QFormLayout, QLineEdit, QComboBox, QMessageBox,
-    QSplitter, QProgressDialog, QSpinBox, QDoubleSpinBox, QTextEdit
+    QSplitter, QProgressDialog, QDoubleSpinBox, QTextEdit
 )
 
 from skimage.metrics import structural_similarity as sk_ssim
@@ -70,10 +70,18 @@ def metric_ssim(a, b):
 def metric_ncc(a, b):
     a_gray = cv2.cvtColor(a, cv2.COLOR_BGR2GRAY).astype(float).ravel()
     b_gray = cv2.cvtColor(b, cv2.COLOR_BGR2GRAY).astype(float).ravel()
-    a_c = a_gray - a_gray.mean()
-    b_c = b_gray - b_gray.mean()
-    denom = np.linalg.norm(a_c)*np.linalg.norm(b_c)
-    if denom == 0: return 0.0
+    return ncc_values(a_gray, b_gray)
+
+def ncc_values(a, b):
+    """NCC of two equally long value arrays. If an image is constant the
+    correlation is undefined: identical images give 1, otherwise ValueError
+    (reported as ERROR) instead of a misleading 0."""
+    a_c = a - a.mean(); b_c = b - b.mean()
+    denom = np.linalg.norm(a_c) * np.linalg.norm(b_c)
+    if denom == 0:
+        if np.array_equal(a, b):
+            return 1.0
+        raise ValueError("NCC undefined for a constant image")
     return float((a_c @ b_c) / denom)
 
 def metric_iou(a, b, thresh=127):
@@ -179,11 +187,6 @@ def metric_contours_strict(a, b):
     if union == 0: return 0.0
     return float(inter/union)
 
-def metric_size_match(a, b, expect_w=None, expect_h=None):
-    if expect_w is not None and expect_h is not None:
-        return 1.0 if (b.shape[1] == expect_w and b.shape[0] == expect_h) else 0.0
-    return 1.0 if (b.shape[1] == a.shape[1] and b.shape[0] == a.shape[0]) else 0.0
-
 def parse_ndiff_params(tol_str, notes):
     thr = 10
     logic = 'any'
@@ -210,17 +213,28 @@ def parse_ndiff_params(tol_str, notes):
 
     return thr, logic, use_gray, tol_clean
 
+def console_file_name(rule_notes):
+    """Name of the console output file: file= in the notes, else stdout.txt."""
+    return parse_notes_kv(rule_notes).get("file") or "stdout.txt"
+
 def read_console_text(student_dir, rule_notes):
-    fname = "stdout.txt"
-    if isinstance(rule_notes,str):
-        m = re.search(r"file\s*=\s*([^,;\s]+)", rule_notes)
-        if m: fname = m.group(1)
-    p = os.path.join(student_dir, fname)
+    """Return (text, status); status is None, "MISSING" or "UNREADABLE".
+    UTF-8 (with or without BOM) and UTF-16 with BOM (e.g. PowerShell
+    redirection) are read; other encodings are reported, never a silent 0."""
+    p = os.path.join(student_dir, console_file_name(rule_notes))
+    if not os.path.isfile(p):
+        return None, "MISSING"
     try:
-        with open(p, "r", encoding="utf-8") as f:
-            return f.read()
+        with open(p, "rb") as f:
+            data = f.read()
+        if data[:2] in (b"\xff\xfe", b"\xfe\xff"):
+            text = data.decode("utf-16")
+        else:
+            text = data.decode("utf-8-sig")
+        # Windows (\r\n) and old Mac (\r) line endings read as \n, as in text mode
+        return text.replace("\r\n", "\n").replace("\r", "\n"), None
     except Exception:
-        return None          # missing/unreadable: reported by the caller, never a silent 0
+        return None, "UNREADABLE"
 
 def console_compare(text, expected_text, mode="exact"):
     t = text.strip(); e = expected_text.strip()
@@ -236,9 +250,11 @@ def console_rule(student_dir, metric, tols, notes):
     # an empty text is "contained" in every output and an empty regex matches anything.
     if not expected_cout_text(tols, notes).strip():
         return None, "ERROR: no expected text set"
-    txt = read_console_text(student_dir, notes)
+    txt, status = read_console_text(student_dir, notes)
     if txt is None:
-        fname = parse_notes_kv(notes).get("file", "stdout.txt") if notes else "stdout.txt"
+        fname = console_file_name(notes)
+        if status == "UNREADABLE":
+            return None, f"UNREADABLE {fname} (not UTF-8 or UTF-16 text)"
         return None, f"MISSING {fname}"
     try:
         return console_compare(txt, expected_cout_text(tols, notes), (metric or "exact").lower()), None
@@ -388,20 +404,6 @@ def csv_column_order(key):
     n = int(m.group(1)) if m else 0
     return n, next((i for i, sfx in enumerate(CSV_SUFFIXES) if key.endswith(sfx)), len(CSV_SUFFIXES))
 
-def map_expected_from_student(student_fname, expected_dir):
-    name = os.path.basename(student_fname)
-    base, ext = os.path.splitext(name)
-    candidates = []
-    for s in ("_stud","_student","-stud","-student"):
-        if base.endswith(s):
-            candidates.append(base[:-len(s)] + ext)
-    candidates.append(base+ext)
-    candidates.append(base.replace("_stud","").replace("_student","")+ext)
-    for c in candidates:
-        p = os.path.join(expected_dir, c)
-        if os.path.exists(p): return p
-    return ""
-
 # ------ helpers for SIZE fallback parsing ------
 def parse_expected_size_any(notes, tols):
     nd = parse_notes_kv(notes)
@@ -518,14 +520,27 @@ def aggregate_map(m, mode="mean"):
         return _trimmed_mean(m, ratio)
     raise ValueError(f"unknown aggregation '{mode}'")
 
+def _max_score_value(text):
+    """Max score for an exported rule: a number if possible, otherwise the text
+    unchanged (evaluation then reports the rule as ERROR)."""
+    try:
+        return float(text)
+    except (TypeError, ValueError):
+        return text
+
+def _is_rule_list(rules):
+    """True for a JSON list whose items are all objects (one per rule)."""
+    return isinstance(rules, list) and all(isinstance(r, dict) for r in rules)
+
 def _cout_fields(rule):
     """(notes, tolerances) for the table from a JSON rule. An expected_cout
     field (older files) is moved into Tolerance(s) and its exp_cout= prefix is
     removed from the notes, so text with commas is not truncated."""
-    notes = rule.get("notes", "") or ""
-    tol_text = rule.get("tolerances", "") or ""
-    exp = rule.get("expected_cout") or ""
-    if exp and (rule.get("output","").strip().lower() == "cout"):
+    notes = str(rule.get("notes", "") or "")
+    tol = rule.get("tolerances", "")
+    tol_text = "" if tol is None else str(tol)
+    exp = str(rule.get("expected_cout") or "")
+    if exp and (str(rule.get("output","")).strip().lower() == "cout"):
         prefix = f"exp_cout={exp}"
         if notes.startswith(prefix):
             notes = notes[len(prefix):].lstrip(",; ")
@@ -566,9 +581,7 @@ def compute_metric(metric, exp, stud, roi=None, aggregation="mean", tols="", not
     if metric == "NCC":
         a = sel(cv2.cvtColor(exp, cv2.COLOR_BGR2GRAY).astype(float))
         b = sel(cv2.cvtColor(stud, cv2.COLOR_BGR2GRAY).astype(float))
-        a = a - a.mean(); b = b - b.mean()
-        denom = np.linalg.norm(a) * np.linalg.norm(b)
-        return (0.0 if denom == 0 else float((a @ b) / denom)), tols
+        return ncc_values(a, b), tols
     if metric == "IoU":
         A = sel(cv2.cvtColor(exp, cv2.COLOR_BGR2GRAY) > 127)
         B = sel(cv2.cvtColor(stud, cv2.COLOR_BGR2GRAY) > 127)
@@ -628,9 +641,9 @@ def ensure_mask_in_notes(table, mask_path):
             table.setItem(r,6,QTableWidgetItem(txt))
 
 def extract_mask_from_notes(notes):
-    if not isinstance(notes,str): return ""
-    m = re.search(r"mask\s*=\s*([^,;]+)", notes, re.I)
-    return m.group(1).strip() if m else ""
+    return parse_notes_kv(notes).get("mask", "").strip()
+
+IMAGE_FILTER = "Images (" + " ".join("*" + e for e in IMG_EXTS) + ")"
 
 def csv_path(path):
     """A file path as written to the CSV: one normalised form per platform
@@ -826,9 +839,9 @@ class BatchWorker(QThread):
                 elif stem and fl.endswith(IMG_EXTS) and self._strip_stud_suffix(fl).lower() == stem:
                     stem_hits.append(os.path.join(root, fn))
         if exact:
-            res = self._resolve_candidates(sorted(exact), "exact")
+            res = self._resolve_candidates(sorted(exact), "exact", root=base_dir)
         else:
-            res = self._resolve_candidates(sorted(stem_hits))
+            res = self._resolve_candidates(sorted(stem_hits), root=base_dir)
         self._stud_cache[key] = res
         return res
 
@@ -861,8 +874,10 @@ class BatchWorker(QThread):
     def run(self):
         self._index_expected()
 
+        # folders such as .git or __MACOSX (from zip files) are not students
         subs = [d for d in sorted(os.listdir(self.student_dir))
-                if os.path.isdir(os.path.join(self.student_dir, d))]
+                if os.path.isdir(os.path.join(self.student_dir, d))
+                and not d.startswith((".", "__"))]
         if not subs:
             subs = [""]
 
@@ -873,6 +888,9 @@ class BatchWorker(QThread):
         step_done = 0
 
         for sub in subs:
+            if self.isInterruptionRequested():   # Cancel pressed: no partial report
+                self.finished.emit(None)
+                return
             base = os.path.join(self.student_dir, sub) if sub else self.student_dir
             student_label = sub or os.path.basename(self.student_dir)
 
@@ -938,18 +956,10 @@ class BatchWorker(QThread):
                     exp_img = explicit_expected
                     expected_path, exp_status = self.expected_image_path, "explicit"
                 else:
-                    if (output or stud_path) and self.expected_dir:
-                        probe_name = output or os.path.basename(stud_path)
-                        expected_path = map_expected_from_student(probe_name, self.expected_dir)
-                        if expected_path:
-                            exp_status = "exact"
-                            same = self._exp_index_exact.get(os.path.basename(expected_path).lower(), [])
-                            if len(same) > 1:   # same name also in a subfolder
-                                expected_path, exp_status = self._resolve_candidates(
-                                    sorted(same), root=self.expected_dir)
-                    if (not expected_path and not exp_status.startswith("AMBIGUOUS")
-                            and self.expected_dir and (output or stud_path)):
-                        probe = output or (os.path.basename(stud_path) if stud_path else "")
+                    # exact name first, then the same stem without student and
+                    # reference suffixes; more than one candidate is AMBIGUOUS
+                    if self.expected_dir and (output or stud_path):
+                        probe = output or os.path.basename(stud_path)
                         expected_path, exp_status = self._find_in_expected(probe)
                     if expected_path:
                         exp_img = imread(expected_path)
@@ -1136,13 +1146,13 @@ class ImageGraderApp(QMainWindow):
         else: self.student_picker.addItem("(no subfolders)")
 
     def on_load_expected_image(self):
-        p,_=QFileDialog.getOpenFileName(self,"Open expected image","","Images (*.png *.jpg *.jpeg)")
+        p,_=QFileDialog.getOpenFileName(self,"Open expected image","",IMAGE_FILTER)
         if p:
             self.expected_image_path=p
             self._update_previews()
 
     def on_load_student_image(self):
-        p,_=QFileDialog.getOpenFileName(self,"Open student image","","Images (*.png *.jpg *.jpeg)")
+        p,_=QFileDialog.getOpenFileName(self,"Open student image","",IMAGE_FILTER)
         if p:
             self.student_image_path=p
             self._update_previews()
@@ -1174,7 +1184,7 @@ class ImageGraderApp(QMainWindow):
             except Exception as e:
                 QMessageBox.warning(self,"ROI error",f"Failed to draw ROI: {e}")
                 return
-        p,_=QFileDialog.getOpenFileName(self,"Open mask image (binary)","","Images (*.png *.jpg *.jpeg)")
+        p,_=QFileDialog.getOpenFileName(self,"Open mask image (binary)","",IMAGE_FILTER)
         if p:
             self.mask_path=p
             self.mask_info.setText(f"Mask: {os.path.basename(p)}")
@@ -1215,9 +1225,12 @@ class ImageGraderApp(QMainWindow):
         return extract_mask_from_notes(notes_text) or (self.mask_path or "")
 
     def on_run_single(self):
-        has_cout = any((self.table.item(r,0) and self.table.item(r,0).text().strip().lower()=="cout") for r in range(self.table.rowCount()))
+        # Image rules need both preview images; console rules do not.
+        has_image_rule = any(self.table.item(r,1) and not (self.table.item(r,0) and
+                             self.table.item(r,0).text().strip().lower()=="cout")
+                             for r in range(self.table.rowCount()))
         exp=None; stud=None
-        if not has_cout:
+        if has_image_rule:
             if not self.expected_image_path or not self.student_image_path:
                 QMessageBox.warning(self,"Missing","Load both expected and student image to run single evaluation."); return
             exp=imread(self.expected_image_path); stud=imread(self.student_image_path)
@@ -1304,11 +1317,14 @@ class ImageGraderApp(QMainWindow):
                 "notes": self.table.item(row,6).text() if self.table.item(row,6) else ""
             })
         if not rules: QMessageBox.warning(self,"No rules","Add at least one rule to run batch evaluation."); return
+        if getattr(self, "worker", None) is not None and self.worker.isRunning():
+            QMessageBox.warning(self,"Busy","A batch evaluation is still running."); return
         save,_=QFileDialog.getSaveFileName(self,"Save CSV results","","CSV Files (*.csv)")
         if not save: return
         self.progress=QProgressDialog("Batch running...","Cancel",0,100,self); self.progress.setWindowModality(Qt.WindowModal); self.progress.setAutoClose(False); self.progress.setValue(0)
         self.worker=BatchWorker(self.student_dir, self.expected_dir, self.expected_image_path or "", rules, self.mask_path or None, self.rules_base_dir)
         self.worker.progress.connect(self.on_worker_progress); self.worker.finished.connect(lambda res: self.on_batch_finished(res, save))
+        self.progress.canceled.connect(self.worker.requestInterruption)
         self.worker.start(); self.progress.exec()
 
     def on_worker_progress(self, percent, fname):
@@ -1317,6 +1333,9 @@ class ImageGraderApp(QMainWindow):
     def on_batch_finished(self, results, save_path):
         try: self.progress.setValue(100); self.progress.close()
         except: pass
+        if results is None:
+            QMessageBox.information(self,"Batch Cancelled","Batch evaluation was cancelled; no CSV was written.")
+            return
         if results:
             # Columns in rule order (R1..Rn) with a fixed order inside each rule,
             # whichever student first produced a column; total_score last.
@@ -1337,15 +1356,10 @@ class ImageGraderApp(QMainWindow):
         if not p: return
         try:
             with open(p,"r",encoding="utf-8") as f: rules=json.load(f)
-            self.table.setRowCount(0)
+            if not _is_rule_list(rules):
+                QMessageBox.warning(self,"Error","The file must contain a JSON list of rules (objects); nothing was loaded."); return
             self.rules_base_dir = os.path.dirname(os.path.abspath(p))
-            for r in rules:
-                notes, tol_text = _cout_fields(r)
-                row=self.table.rowCount(); self.table.insertRow(row)
-                self.table.setItem(row,0,QTableWidgetItem(r.get("output",""))); self.table.setItem(row,1,QTableWidgetItem(r.get("metric","")))
-                self.table.setItem(row,2,QTableWidgetItem(str(r.get("max_score",1.0)))); self.table.setItem(row,3,QTableWidgetItem(tol_text))
-                self.table.setItem(row,4,QTableWidgetItem(r.get("mode","bucket"))); self.table.setItem(row,5,QTableWidgetItem(r.get("aggregation","mean")))
-                self.table.setItem(row,6,QTableWidgetItem(notes)); self.table.setItem(row,7,QTableWidgetItem(r.get("result","")))
+            self._fill_table(rules)
             QMessageBox.information(self,"Loaded",f"Loaded rules from {p}")
         except Exception as e:
             QMessageBox.warning(self,"Error",f"Failed to load JSON: {e}")
@@ -1356,16 +1370,14 @@ class ImageGraderApp(QMainWindow):
         rules=[]
         for row in range(self.table.rowCount()):
             notes = self.table.item(row,6).text() if self.table.item(row,6) else ""
-            nd = parse_notes_kv(notes)
             rules.append({
                 "output": self.table.item(row,0).text() if self.table.item(row,0) else "",
                 "metric": self.table.item(row,1).text() if self.table.item(row,1) else "",
-                "max_score": float(self.table.item(row,2).text()) if self.table.item(row,2) else 1.0,
+                "max_score": _max_score_value(self.table.item(row,2).text()) if self.table.item(row,2) else 1.0,
                 "tolerances": self.table.item(row,3).text() if self.table.item(row,3) else "",
                 "mode": self.table.item(row,4).text() if self.table.item(row,4) else "bucket",
                 "aggregation": self.table.item(row,5).text() if self.table.item(row,5) else "mean",
-                "notes": notes,
-                "result": self.table.item(row,7).text() if self.table.item(row,7) else ""
+                "notes": notes
             })
         try:
             with open(p,"w",encoding="utf-8") as f: json.dump(rules,f,indent=2)
@@ -1379,10 +1391,9 @@ class ImageGraderApp(QMainWindow):
             out=self.table.item(row,0); met=self.table.item(row,1); mx=self.table.item(row,2); tol=self.table.item(row,3); mode=self.table.item(row,4); agg=self.table.item(row,5); notes=self.table.item(row,6)
             if not (out and met and mx): continue
             notes_text = notes.text().strip() if notes else ""
-            nd = parse_notes_kv(notes_text)
             rules.append({
                 "output": out.text().strip(),"metric": met.text().strip(),
-                "max_score": float(mx.text().strip() or 1.0),
+                "max_score": _max_score_value(mx.text().strip() or 1.0),
                 "tolerances": tol.text().strip() if tol else "",
                 "mode": mode.text().strip() if mode else "bucket",
                 "aggregation": agg.text().strip() if agg else "mean",
@@ -1393,14 +1404,23 @@ class ImageGraderApp(QMainWindow):
     def on_apply_rules_text(self):
         try: rules=json.loads(self.rules_text.toPlainText())
         except Exception as e: QMessageBox.warning(self,"Invalid JSON",f"{e}"); return
+        if not _is_rule_list(rules):
+            QMessageBox.warning(self,"Invalid rules","The text must be a JSON list of rules (objects); the table was not changed."); return
+        self._fill_table(rules)
+
+    def _fill_table(self, rules):
+        """Put a validated list of rules into the table. Every field is shown as
+        text; results from an earlier run are not carried over."""
+        def txt(v, default=""):
+            return default if v is None else str(v)
         self.table.setRowCount(0)
         for r,rule in enumerate(rules):
             self.table.insertRow(r)
-            self.table.setItem(r,0,QTableWidgetItem(rule.get("output",""))); self.table.setItem(r,1,QTableWidgetItem(rule.get("metric","")))
             notes, tol_text = _cout_fields(rule)
-            self.table.setItem(r,2,QTableWidgetItem(str(rule.get("max_score",1.0)))); self.table.setItem(r,3,QTableWidgetItem(tol_text))
-            self.table.setItem(r,4,QTableWidgetItem(rule.get("mode","bucket"))); self.table.setItem(r,5,QTableWidgetItem(rule.get("aggregation","mean")))
-            self.table.setItem(r,6,QTableWidgetItem(notes)); self.table.setItem(r,7,QTableWidgetItem(""))
+            cells = [txt(rule.get("output","")), txt(rule.get("metric","")), txt(rule.get("max_score",1.0)),
+                     tol_text, txt(rule.get("mode","bucket")), txt(rule.get("aggregation","mean")), notes, ""]
+            for c, v in enumerate(cells):
+                self.table.setItem(r,c,QTableWidgetItem(v))
 
     def on_scan_assignment(self):
         d=QFileDialog.getExistingDirectory(self,"Select assignment folder")

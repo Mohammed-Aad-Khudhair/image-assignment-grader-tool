@@ -100,7 +100,7 @@ Formula: PSNR = 20 * log10(255 / sqrt(MSE)).
 When: blur/denoise tasks; human-aligned.
 Better: higher (≈0–1).
 Formula: standard SSIM(A,B) on grayscale.
-•	NCC (Normalized Cross-Correlation) — pattern correlation.
+•	NCC (Normalized Cross-Correlation) — pattern correlation. For a constant image NCC is undefined: identical images score full points, otherwise the rule is reported as ERROR.
 When: template-matching style checks.
 Better: higher (−1..1).
 •	ΔE (CIEDE2000 color difference) — perceptual color error in Lab.
@@ -161,7 +161,7 @@ Use when a few outliers shouldn’t dominate.
 Use when any severe local error must be penalized.
 •	trim10 — drop lowest 10% and highest 10%, then mean.
 Use when you want a stable mean that ignores extremes.
-Aggregation is ignored for scalar metrics (SSIM/PSNR/IoU/etc.).
+Aggregation is ignored for scalar metrics (SSIM/PSNR/IoU/etc.), but it must still be a valid name (mean, median, max or trim<p>); otherwise the rule is reported as ERROR.
 ________________________________________
 
 5) Tolerance(s) — thresholds & how to write them
@@ -266,14 +266,15 @@ Bucket or continuous?
 File names
 •	Tell students the exact output file name, e.g. mask_stud.png, and give each student one folder (students/<name>/).
 •	ImgGrader looks for the exact name first (also in subfolders), then for the same name with or without a student suffix (_stud, _student, -stud, -student) and any image extension (.png, .jpg, .jpeg, .bmp, .tif, .tiff).
-•	If the exact name is not found and two files match (e.g. mask-stud.png and mask_student.png), the rule is reported as AMBIGUOUS with 0 points; no file is picked. A missing file is MISSING, an empty or damaged file is UNREADABLE. Check the CSV for these entries before publishing grades.
-•	Reference files in the Expected Dir may carry the suffix gt, ref, reference or expected, after _ or - (mask_gt.png, mask-reference.png). Two reference files with the same name (e.g. in two subfolders of the Expected Dir) are reported as AMBIGUOUS expected with 0 points.
+•	If two files match (e.g. mask-stud.png and mask_student.png, or the exact name in two subfolders), the rule is reported as AMBIGUOUS with 0 points and the CSV lists the candidates; no file is picked. A missing file is MISSING, an empty or damaged file is UNREADABLE. Check the CSV for these entries before publishing grades.
+•	Reference files in the Expected Dir may carry the suffix gt, ref, reference or expected, after _ or - (mask_gt.png, mask-reference.png). Two candidate references (e.g. the same name in two subfolders, or photo.png and photo_gt.png for photo_stud.png) are reported as AMBIGUOUS expected with 0 points; keep input images out of the Expected Dir or give them a different name.
 •	A rule with an unknown Mode or Aggregation, or a Max score that is not a number of 0 or more, is reported as ERROR with 0 points. Mode and Aggregation ignore upper and lower case (Bucket = bucket).
 Image size
 •	A student image of a different size is resized to the reference size (area interpolation) before comparison, and the CSV column R<n>_<metric>_resized is 1. Resizing loses detail, so a smaller image usually scores lower; if the output size is part of the task, add a SIZE rule (it compares the original sizes) or tell students the required size.
 Formats
 •	Images: PNG, JPEG, BMP and TIFF; grey, colour, RGBA (alpha ignored) and 16-bit images are read. Masks: any of these; white (grey value above 127) = included.
-•	Console output: a text file written by the student's program (default stdout.txt). ImgGrader does not run student code; the files must already be in the student folders.
+•	Console output: a text file written by the student's program (default stdout.txt). ImgGrader does not run student code; the files must already be in the student folders. UTF-8 (with or without BOM) and UTF-16 with BOM (the default of > redirection in Windows PowerShell 5.1) are read; a file in another encoding is reported as UNREADABLE.
+•	Folders whose names start with . or __ (e.g. .git, __MACOSX from zip files) are not treated as students.
 Limitations
 •	Each rule compares the student's output with one reference. If several different outputs are correct, use tolerant metrics and bands (e.g. IoU or SSIM instead of EXACT) that every correct output reaches.
 •	ImgGrader produces scores and the CSV report, not written feedback; per-rule values in the CSV can be shared with students to explain the score.

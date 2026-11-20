@@ -270,3 +270,88 @@ def test_unreadable_explicit_reference_is_reported_not_replaced(course):
     row = run_batch(str(course / "students"), [rule], expected_dir=str(course / "expected"),
                     expected_image=str(bad))["s_ok"]
     assert row["R1_IoU_val"] == "UNREADABLE expected" and row["R1_IoU_score"] == 0.0
+
+
+def _one_student(tmp_path, files):
+    d = tmp_path / "students" / "s1"; d.mkdir(parents=True)
+    for name, data in files.items():
+        p = d / name
+        if isinstance(data, bytes):
+            p.write_bytes(data)
+        else:
+            cv2.imwrite(str(p), data)
+    return tmp_path / "students"
+
+
+def test_reference_and_input_image_with_the_same_stem_are_ambiguous(tmp_path):
+    """photo.png (the input) and photo_gt.png (the reference) both match
+    photo_stud.png: the rule is AMBIGUOUS, on every OS and at any folder depth."""
+    E = tmp_path / "expected"; E.mkdir()
+    cv2.imwrite(str(E / "photo.png"), disk(r=10)); cv2.imwrite(str(E / "photo_gt.png"), disk())
+    S = _one_student(tmp_path, {"photo_stud.png": disk()})
+    rule = {"output": "photo_stud.png", "metric": "IoU", "max_score": 1, "tolerances": "0.9", "mode": "bucket"}
+    row = run_batch(str(S), [rule], expected_dir=str(E))["s1"]
+    assert row["R1_IoU_val"] == "AMBIGUOUS expected" and row["R1_IoU_score"] == 0.0
+
+
+def test_reference_lookup_ignores_case(tmp_path):
+    E = tmp_path / "expected"; E.mkdir(); cv2.imwrite(str(E / "Photo_GT.png"), disk())
+    S = _one_student(tmp_path, {"photo_stud.png": disk()})
+    rule = {"output": "photo_stud.png", "metric": "IoU", "max_score": 1, "tolerances": "0.9", "mode": "bucket"}
+    row = run_batch(str(S), [rule], expected_dir=str(E))["s1"]
+    assert row["R1_IoU_val"] == 1.0 and row["R1_IoU_score"] == 1.0
+
+
+@pytest.mark.parametrize("data,val,status", [
+    ("﻿Area: 100\n".encode("utf-8"), 1.0, None),              # UTF-8 with BOM
+    ("Area: 100\r\n".encode("utf-16"), 1.0, None),                 # PowerShell > redirection
+    ("Terület: 100\n".encode("cp1250"), None, "UNREADABLE stdout.txt"),
+])
+def test_console_output_encodings(tmp_path, data, val, status):
+    S = _one_student(tmp_path, {"stdout.txt": data})
+    rule = {"output": "cout", "metric": "regex", "max_score": 2, "tolerances": "^(Area|Terület): 100$", "mode": "bucket"}
+    row = run_batch(str(S), [rule])["s1"]
+    if status:
+        assert str(row["R1_regex_val"]).startswith(status) and row["R1_regex_score"] == 0.0
+    else:
+        assert row["R1_regex_val"] == val and row["R1_regex_score"] == 2.0
+
+
+def test_console_file_note_uses_the_same_parser_as_messages(tmp_path):
+    S = _one_student(tmp_path, {"log.txt": b"Area: 100\n", "stdout.txt": b"wrong\n"})
+    rule = {"output": "cout", "metric": "exact", "max_score": 1, "tolerances": "Area: 100",
+            "mode": "bucket", "notes": "File=log.txt"}
+    assert run_batch(str(S), [rule])["s1"]["R1_exact_score"] == 1.0
+    rule["notes"] = 'file="my out.txt"'
+    assert run_batch(str(S), [rule])["s1"]["R1_exact_val"] == "MISSING my out.txt"
+
+
+def test_ncc_of_constant_images(tmp_path):
+    """Identical constant images correlate perfectly; a constant image against
+    a different one has no defined NCC and is an error, not 0 points."""
+    flat = np.full((40, 40, 3), 200, np.uint8)
+    E = tmp_path / "expected"; E.mkdir(); cv2.imwrite(str(E / "img.png"), flat)
+    S = _one_student(tmp_path, {"img.png": flat})
+    rule = {"output": "img.png", "metric": "NCC", "max_score": 1, "tolerances": "0.9", "mode": "bucket"}
+    assert run_batch(str(S), [rule], expected_dir=str(E))["s1"]["R1_NCC_score"] == 1.0
+    cv2.imwrite(str(S / "s1" / "img.png"), disk(h=40, w=40, r=10))
+    row = run_batch(str(S), [rule], expected_dir=str(E))["s1"]
+    assert str(row["R1_NCC_val"]).startswith("ERROR") and row["R1_NCC_score"] == 0.0
+
+
+def test_hidden_and_zip_folders_are_not_students(tmp_path):
+    S = _one_student(tmp_path, {"img.png": disk()})
+    (S / "__MACOSX").mkdir(); (S / ".git").mkdir()
+    rule = {"output": "img.png", "metric": "SIZE", "max_score": 1, "tolerances": "0", "mode": "bucket",
+            "notes": "100x100"}
+    assert set(run_batch(str(S), [rule])) == {"s1"}
+
+
+def test_duplicate_student_files_are_listed_with_their_folders(tmp_path):
+    S = _one_student(tmp_path, {"m_stud.png": disk()})
+    (S / "s1" / "backup").mkdir(); cv2.imwrite(str(S / "s1" / "backup" / "m_stud.png"), disk())
+    rule = {"output": "m_stud.png", "metric": "SIZE", "max_score": 1, "tolerances": "0", "mode": "bucket",
+            "notes": "100x100"}
+    row = run_batch(str(S), [rule])["s1"]
+    assert row["R1_SIZE_val"] == "AMBIGUOUS student"
+    assert os.path.join("backup", "m_stud.png") in row["R1_SIZE_student_path"]

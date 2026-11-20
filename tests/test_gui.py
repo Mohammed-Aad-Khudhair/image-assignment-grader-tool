@@ -165,6 +165,63 @@ def test_exported_rules_have_no_duplicate_expected_cout(g, qapp, tmp_path, monke
     assert win2.table.item(0, 3).text() == "Area: 1520, Perimeter"
 
 
+def _set_rows(win, g, rows):
+    win.table.setRowCount(0)
+    for r, cells in enumerate(rows):
+        win.table.insertRow(r)
+        for c, v in enumerate(cells):
+            win.table.setItem(r, c, g.QTableWidgetItem(v))
+
+
+def test_single_eval_runs_image_rules_next_to_a_cout_rule(g, qapp, tmp_path, monkeypatch):
+    _stub_dialogs(g, monkeypatch)
+    exp = tmp_path / "exp.png"; stud = tmp_path / "s1" / "img.png"; stud.parent.mkdir()
+    cv2.imwrite(str(exp), disk()); cv2.imwrite(str(stud), disk())
+    (stud.parent / "stdout.txt").write_text("Area: 1\n", encoding="utf-8")
+    win = g.ImageGraderApp()
+    win.expected_image_path, win.student_image_path = str(exp), str(stud)
+    _set_rows(win, g, [["img.png", "IoU", "2", "0.9", "bucket", "mean", ""],
+                       ["cout", "exact", "1", "Area: 1", "bucket", "mean", ""]])
+    win.on_run_single()
+    assert win.table.item(0, 7).text() == "Value 1.0000 | Score 2.00"
+    assert win.table.item(1, 7).text() == "cout: 1.0 | score 1.00"
+
+
+def test_rule_files_and_text_are_checked_before_the_table_changes(g, qapp, tmp_path, monkeypatch):
+    """Numeric tolerances import as text; a JSON object that is not a list of
+    rules leaves the table unchanged; a non-numeric max score can be exported."""
+    src = tmp_path / "rules.json"
+    src.write_text(json.dumps([{"output": "a.png", "metric": "MSE", "max_score": 2, "tolerances": 5,
+                                "mode": "bucket", "result": "Value 9 | Score 0"}]), encoding="utf-8")
+    _stub_dialogs(g, monkeypatch, str(src))
+    win = g.ImageGraderApp(); win.on_import_json()
+    assert win.table.item(0, 3).text() == "5" and win.table.item(0, 7).text() == ""
+    win.rules_text.setPlainText(json.dumps({"output": "b.png", "metric": "IoU"}))
+    win.on_apply_rules_text()
+    assert win.table.rowCount() == 1 and win.table.item(0, 0).text() == "a.png"
+    win.table.setItem(0, 2, g.QTableWidgetItem("abc"))
+    out = tmp_path / "out.json"
+    monkeypatch.setattr(g.QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(out), "")))
+    win.on_export_rules(); win.on_refresh_rules_text()
+    assert json.loads(out.read_text(encoding="utf-8"))[0]["max_score"] == "abc"
+    assert "result" not in json.loads(out.read_text(encoding="utf-8"))[0]
+    assert json.loads(win.rules_text.toPlainText())[0]["max_score"] == "abc"
+
+
+def test_cancel_stops_the_batch_without_a_report(g, qapp, tmp_path):
+    S = tmp_path / "students"
+    for i in range(30):
+        d = S / f"s{i:02d}"; d.mkdir(parents=True); cv2.imwrite(str(d / "img.png"), disk())
+    rule = {"output": "img.png", "metric": "SIZE", "max_score": 1, "tolerances": "0", "mode": "bucket",
+            "notes": "100x100"}
+    w = g.BatchWorker(str(S), "", "", [rule], None, "")
+    got = []
+    w.finished.connect(lambda res: got.append(res), g.Qt.DirectConnection)
+    w.progress.connect(lambda *a: w.requestInterruption(), g.Qt.DirectConnection)
+    w.start(); w.wait(10000)
+    assert got == [None]
+
+
 def test_no_deprecated_exec_calls(g):
     import inspect
     assert "exec_(" not in inspect.getsource(g)
