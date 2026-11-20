@@ -20,7 +20,7 @@ python analysis/aggregation.py
 python analysis/performance.py
 ```
 
-All scripts except `performance.py` give the same files on every run. `performance.py` measures time and memory, which depend on the computer; it writes one file per operating system.
+All scripts except `performance.py` give the same files on every run with the same library versions (with other versions, `realistic_tasks.py` can differ in the last digits of some values, never in the points). `performance.py` measures time and memory, which depend on the computer; it writes one file per operating system.
 
 ## thresholds.py
 

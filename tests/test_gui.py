@@ -244,3 +244,32 @@ def test_cancel_during_the_last_student_writes_no_report(g, qapp, tmp_path):
 def test_no_deprecated_exec_calls(g):
     import inspect
     assert "exec_(" not in inspect.getsource(g)
+
+
+def test_a_new_global_mask_replaces_the_previous_one(g, qapp, tmp_path, monkeypatch):
+    """Regression: loading a second mask kept the first one in the notes."""
+    win = g.ImageGraderApp()
+    _set_rows(win, g, [["img.png", "MSE", "1", "1", "bucket", "mean", "gray=1"],
+                       ["img.png", "MSE", "1", "1", "bucket", "mean", "mask=own.png"]])
+    monkeypatch.setattr(g.QMessageBox, "question", staticmethod(lambda *a, **k: g.QMessageBox.No))
+    for name in ("left, 1.png", "right.png"):
+        _stub_dialogs(g, monkeypatch, str(tmp_path / name)); win.on_load_mask()
+    assert win.table.item(0, 6).text() == f'gray=1,mask="{tmp_path / "right.png"}"'
+    assert win.table.item(1, 6).text() == "mask=own.png"
+    win.table.setItem(0, 6, g.QTableWidgetItem(f'note="mask=x, y",mask="{tmp_path / "right.png"}"'))
+    _stub_dialogs(g, monkeypatch, str(tmp_path / "third.png")); win.on_load_mask()
+    assert win.table.item(0, 6).text() == f'note="mask=x, y",mask="{tmp_path / "third.png"}"'
+
+
+def test_added_rule_keeps_its_own_mask(g, qapp, monkeypatch):
+    """Regression: the popup appended the global mask after the rule's own mask=,
+    unquoted, and to console rules."""
+    win = g.ImageGraderApp(); win.mask_path = "C:/m, 2/global.png"
+    for out, notes, want in [("a.png", "mask=own.png", "own.png"), ("a.png", "", "C:/m, 2/global.png"),
+                             ("cout", "", "")]:
+        rule = {"output": out, "metric": "MSE", "max_score": 1, "tolerances": "1", "mode": "bucket",
+                "aggregation": "mean", "notes": notes}
+        monkeypatch.setattr(g.RulePopup, "exec", lambda self: 1)
+        monkeypatch.setattr(g.RulePopup, "get_rule", lambda self, r=rule: dict(r))
+        win.on_add_rule_popup()
+        assert g.extract_mask_from_notes(win.table.item(win.table.rowCount() - 1, 6).text()) == want

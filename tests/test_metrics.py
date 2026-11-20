@@ -122,3 +122,28 @@ def test_contours_strict_counts_objects_inside_holes(g):
     ring_only = disk(r=40, hole=25)
     assert g._holes_signature(cv2.cvtColor(ring_with_island, cv2.COLOR_BGR2GRAY)) == [0, 1]
     assert g.metric_contours_strict(ring_with_island, ring_only) == 0.5
+
+
+def test_continuous_with_zero_tolerance_is_pass_fail(g):
+    """Regression: Objects, Holes and Euler default to tolerance 0; in continuous
+    mode a perfect result received 0 points."""
+    for metric in ("Objects", "Holes", "Euler", "SIZE", "MSE"):
+        assert g.compute_score(metric, 0, 2, "0", "continuous") == 2.0
+        assert g.compute_score(metric, 1, 2, "0", "continuous") == 0.0
+    assert g.compute_score("NCC", 0.5, 4, "0", "continuous") == 4.0      # higher is better
+    assert g.compute_score("NCC", -0.2, 4, "0", "continuous") == 0.0
+
+
+@pytest.mark.parametrize("tol", ["-1", "1,-2", "nan", "inf"])
+def test_negative_or_non_finite_tolerances_are_errors(g, tol):
+    """Regression: a negative tolerance gave more than the maximum score, NaN
+    gave a silent 0 and inf full points for any value."""
+    for mode in ("bucket", "continuous"):
+        with pytest.raises(ValueError):
+            g.compute_score("MSE", 5, 1, tol, mode)
+
+
+def test_runs_of_dashes_count_as_no_tolerance(g):
+    assert g.compute_score("EXACT", 1.0, 1, "---", "bucket") == 1.0
+    assert g.compute_score("EXACT", 0.0, 1, "--", "bucket") == 0.0
+    assert g.compute_score("EXACT", 1.0, 1, "- -", "bucket") == 1.0

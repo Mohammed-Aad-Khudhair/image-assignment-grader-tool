@@ -17,7 +17,9 @@ for e in exp:
     if e["expected_status"]:
         good = str(val).startswith(e["expected_status"])
     else:
-        x, y = float(val) if val not in ("", None) else None, float(e["expected_value"])
+        try: x = float(val) if val not in ("", None) else None
+        except ValueError: x = None   # a status where a value is expected
+        y = float(e["expected_value"])
         good = x is not None and ((math.isinf(x) and math.isinf(y)) or abs(x - y) <= 1e-3 * max(1, abs(y)))
     good = good and abs(float(sc or 0) - float(e["expected_score"])) <= 2e-3 * max(1, float(e["max_score"]))
     ok += good; bad += not good

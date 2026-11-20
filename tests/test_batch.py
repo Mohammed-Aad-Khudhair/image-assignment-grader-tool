@@ -414,3 +414,62 @@ def test_global_mask_path_with_a_comma(g, qapp, tmp_path):
     win.table.setItem(0, 6, g.QTableWidgetItem("gray=1"))
     g.ensure_mask_in_notes(win.table, str(d / "roi.png"))
     assert g.extract_mask_from_notes(win.table.item(0, 6).text()) == str(d / "roi.png")
+
+
+def test_blank_output_after_a_rule_with_invalid_settings(tmp_path):
+    """Regression: a blank Output repeated the rule before an invalid rule."""
+    E = tmp_path / "expected"; E.mkdir()
+    cv2.imwrite(str(E / "a.png"), disk()); cv2.imwrite(str(E / "b.png"), disk())
+    S = _one_student(tmp_path, {"a_stud.png": disk()})          # b_stud.png not handed in
+    rules = [{"output": "a_stud.png", "metric": "MSE", "max_score": 1, "tolerances": "1", "mode": "bucket"},
+             {"output": "b_stud.png", "metric": "MSE", "max_score": "one", "tolerances": "1", "mode": "bucket"},
+             {"output": "", "metric": "MSE", "max_score": 1, "tolerances": "1", "mode": "bucket"}]
+    row = run_batch(str(S), rules, expected_dir=str(E))["s1"]
+    assert row["R3_MSE_val"] == "MISSING student" and row["R3_MSE_score"] == 0.0
+    assert row["total_score"] == 1.0
+
+
+@pytest.mark.parametrize("notes", ["expect_w=-5; expect_h=10", "width=10; height=-3"])
+def test_invalid_size_in_notes_does_not_stop_the_batch(tmp_path, notes):
+    """Regression: a negative size crashed the batch thread without a report."""
+    S = _one_student(tmp_path, {"img.png": disk()})
+    rule = {"output": "img.png", "metric": "SIZE", "max_score": 1, "tolerances": "0", "mode": "bucket",
+            "notes": notes}
+    row = run_batch(str(S), [rule])["s1"]
+    assert row["R1_SIZE_val"] == "MISSING expected" and row["R1_SIZE_score"] == 0.0
+
+
+def test_unexpected_batch_error_is_reported(g):
+    w = g.BatchWorker("/no/such/folder", "", "", [{"output": "a.png", "metric": "MSE"}], None, "")
+    got = []
+    w.finished.connect(got.append); w.run()
+    assert len(got) == 1 and isinstance(got[0], str)
+
+
+def test_console_file_in_a_subfolder_ignores_case(tmp_path):
+    S = _one_student(tmp_path, {})
+    (S / "s1" / "out").mkdir(); (S / "s1" / "out" / "LOG.txt").write_text("done\n", encoding="utf-8")
+    rule = {"output": "cout", "metric": "contains", "max_score": 1, "tolerances": "done", "mode": "bucket",
+            "notes": "file=out/log.txt"}
+    assert run_batch(str(S), [rule])["s1"]["R1_contains_score"] == 1.0
+
+
+def test_ndiff_notes_are_read_as_keys_only(g):
+    assert g.parse_ndiff_params("0,10", "mythr=3")[0] == 10
+    assert g.parse_ndiff_params("0,10", 'mask="masks/gray=1/roi.png"')[2] is False
+    assert g.parse_ndiff_params("0,10", 'thr=3; gray=1; mask="a, b.png"')[:3] == (3, "any", True)
+
+
+def test_check_my_csv_reports_a_status_instead_of_stopping(tmp_path):
+    import csv, subprocess, sys
+    kit = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "test_kit")
+    rows = list(csv.DictReader(open(os.path.join(kit, "T01_pixel_errors", "EXPECTED_RESULTS.csv"), encoding="utf-8")))
+    r = next(r for r in rows if r.get("student") and not r["expected_status"])
+    col = f"R{r['rule']}_{r['metric']}"
+    mine = tmp_path / "mine.csv"
+    with open(mine, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f); w.writerow(["student", col + "_val", col + "_score"])
+        w.writerow([r["student"], "MISSING student", 0])
+    out = subprocess.run([sys.executable, os.path.join(kit, "check_my_csv.py"), os.path.join(kit, "T01_pixel_errors"),
+                          str(mine)], capture_output=True, text=True)
+    assert out.returncode == 0 and "DIFFERENT" in out.stdout

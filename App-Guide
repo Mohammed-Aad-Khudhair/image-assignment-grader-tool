@@ -177,6 +177,7 @@ Example 1,2,10,50
 o	≤1 → best band
 o	≤2 → next …
 o	otherwise 0
+Tolerances are numbers of at least 0; a negative, unreadable or infinite tolerance (or NaN) is reported as ERROR (0 points).
 Special (N_DIFF_PIXELS):
 thr:10 | 3000,8000,12000
 •	thr:10 → per-pixel sensitivity.
@@ -192,6 +193,7 @@ Fairer when results often fall between bands.
 Simple formulas (intuition):
 •	Higher-is-better: score ≈ min(value / top_threshold, 1) * MaxScore
 •	Lower-is-better: score ≈ max(0, 1 − value / largest_tolerance) * MaxScore
+If the largest tolerance is 0, the rule is pass/fail, as in bucket mode (e.g. Objects with tolerance 0).
 ________________________________________
 7) Keywords / Notes (advanced options)
 These are commands (not just comments) that alter behavior:
@@ -210,6 +212,7 @@ ________________________________________
 • No to load a binary mask image (white=included).
 •	Only masked pixels contribute to metrics.
 •	A rule with its own mask= note uses that mask instead of the loaded one (Section 7).
+•	Loading another mask replaces the previously loaded one in the rules.
 •	The mask is resized to the expected image automatically.
 Why it matters: focus grading on the important region; ignore background/borders
 ________________________________________________________

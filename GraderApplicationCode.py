@@ -203,14 +203,16 @@ def parse_ndiff_params(tol_str, notes):
             tol_clean = ",".join(parts)
 
     if notes:
-        m = re.search(r"thr\s*=\s*([^,;\s]+)", notes, re.I)
+        # quoted values (e.g. a mask path) and other keys such as mythr= are not read
+        notes = re.sub(r'"[^"]*"', '""', notes)
+        m = re.search(r"(?<!\w)thr\s*=\s*([^,;\s]+)", notes, re.I)
         if m:
             if not re.fullmatch(r"\d+", m.group(1)):
                 raise ValueError(f"invalid thr '{m.group(1)}' (use a whole number of grey levels)")
             thr = int(m.group(1))
-        m = re.search(r"logic\s*=\s*(any|all)", notes, re.I)
+        m = re.search(r"(?<!\w)logic\s*=\s*(any|all)", notes, re.I)
         if m: logic = m.group(1).lower()
-        m = re.search(r"(gray|grey)\s*=\s*([01]|true|false)", notes, re.I)
+        m = re.search(r"(?<!\w)(gray|grey)\s*=\s*([01]|true|false)", notes, re.I)
         if m:
             use_gray = m.group(2).lower() in ('1','true')
 
@@ -228,7 +230,8 @@ def read_console_text(student_dir, rule_notes):
     p = os.path.join(student_dir, name)
     if not os.path.isfile(p):
         # the same name in other upper/lower case, as for image files
-        hits = [f for f in (os.listdir(student_dir) if os.path.isdir(student_dir) else [])
+        folder = os.path.join(student_dir, os.path.dirname(name))
+        hits = [f for f in (os.listdir(folder) if os.path.isdir(folder) else [])
                 if f.lower() == os.path.basename(name).lower()
                 and os.path.isfile(os.path.join(student_dir, os.path.dirname(name), f))]
         if len(hits) != 1:
@@ -379,13 +382,17 @@ def check_rule_settings(max_score, mode="bucket", aggregation="mean"):
 def compute_score(metric_name, value, max_score, tol_str, mode="bucket"):
     """Map a metric value to points. Raises ValueError if the tolerances are
     missing or cannot be read, or if the maximum score or the mode is invalid,
-    so such a rule never awards points silently. EXACT without tolerances is
-    pass/fail. The score always lies in [0, max_score]."""
+    so such a rule never awards points silently. Tolerances must be finite
+    numbers of at least 0. EXACT without tolerances is pass/fail. The score
+    always lies in [0, max_score]."""
     max_score, mode, _ = check_rule_settings(max_score, mode)
-    parts = [t.strip() for t in (tol_str or "").split(",") if t.strip() not in ("", "-", "\u2013", "\u2014")]
+    parts = [t.strip() for t in (tol_str or "").split(",")
+             if not re.fullmatch(r"[-\u2013\u2014\s]*", t)]
     try: tols = [float(t) for t in parts]
     except ValueError:
         raise ValueError(f"invalid tolerances '{tol_str}'")
+    if not all(math.isfinite(t) and t >= 0 for t in tols):
+        raise ValueError(f"invalid tolerances '{tol_str}' (use finite numbers of at least 0)")
     higher = metric_name in {"PSNR","SSIM","NCC","IoU","Contours","ContoursStrict","EXACT"}
     if not tols:
         if metric_name == "EXACT":
@@ -398,7 +405,7 @@ def compute_score(metric_name, value, max_score, tol_str, mode="bucket"):
                 if value >= t: return max_score*(1.0 - i/len(tols))
             return 0.0
         top = tols[0]
-        if top==0: return 0.0
+        if top==0: return max_score if value >= 0 else 0.0   # pass/fail, as in bucket mode
         return max_score*max(0.0, min(value/top,1.0))
     else:
         tols = sorted(tols)
@@ -407,7 +414,7 @@ def compute_score(metric_name, value, max_score, tol_str, mode="bucket"):
                 if value <= t: return max_score*(1.0 - i/len(tols))
             return 0.0
         top = tols[-1]
-        if top==0: return 0.0
+        if top==0: return max_score if value <= 0 else 0.0   # pass/fail, as in bucket mode
         return max_score*max(0.0, 1.0 - value/top)
 
 CSV_SUFFIXES = ("_mask", "_student_path", "_expected_path", "_resized", "_val", "_score")
@@ -424,14 +431,16 @@ def parse_expected_size_any(notes, tols):
     ew = nd.get("expect_w") or nd.get("w") or nd.get("width")
     eh = nd.get("expect_h") or nd.get("h") or nd.get("height")
     if ew and eh:
-        try: return int(float(ew)), int(float(eh))
+        try:
+            w, h = int(float(ew)), int(float(eh))
+            if w > 0 and h > 0: return w, h
         except: pass
     # a notes entry that is exactly WxH (or size=WxH); a WxH inside another
     # value, e.g. a mask file name, is not a size
     size = nd.get("size", "")
     for tok in [size] + re.split(r"[,;]", notes or ""):
         m = re.fullmatch(r"\s*(\d+)\s*[xX]\s*(\d+)\s*", tok or "")
-        if m:
+        if m and int(m.group(1)) > 0 and int(m.group(2)) > 0:
             return int(m.group(1)), int(m.group(2))
     return None, None
 
@@ -636,9 +645,10 @@ def overlay_mask_on_image(img_bgr, mask_gray, alpha=0.35):
     over[m] = np.clip((1.0 - alpha)*over[m] + alpha*red[m], 0, 255).astype(np.uint8)
     return over
 
-def ensure_mask_in_notes(table, mask_path):
+def ensure_mask_in_notes(table, mask_path, old_mask=""):
     """Add the global mask to image rules that have no mask of their own.
-    A rule's own mask= is never overwritten (e.g. separate CL-ring / BG-ring masks)."""
+    A rule's own mask= is never overwritten (e.g. separate CL-ring / BG-ring masks);
+    only the previously loaded global mask (old_mask) is replaced."""
     if not mask_path:
         return
     for r in range(table.rowCount()):
@@ -647,8 +657,13 @@ def ensure_mask_in_notes(table, mask_path):
             continue
         item = table.item(r,6)
         txt = (item.text() if item else "").strip()
-        if extract_mask_from_notes(txt):
+        own = extract_mask_from_notes(txt)
+        if own and not (old_mask and own == old_mask):
             continue
+        if own:   # the previous global mask (text inside other quoted values is kept)
+            txt = re.sub(r'"[^"]*"|(?<!\w)mask\s*=\s*(?:"[^"]*"|[^,;]*)',
+                         lambda m: m.group(0) if m.group(0).startswith('"') else '', txt, flags=re.I)
+            txt = re.sub(r'[,;]\s*(?=[,;]|$)', '', txt).strip(" ,;")
         txt = f'{txt},mask="{mask_path}"' if txt else f'mask="{mask_path}"'
         if item:
             item.setText(txt)
@@ -895,6 +910,13 @@ class BatchWorker(QThread):
             return 0.0
 
     def run(self):
+        # an unexpected error is reported instead of leaving the progress dialog open
+        try:
+            self._run_batch()
+        except Exception as e:
+            self.finished.emit(f"{type(e).__name__}: {e}")
+
+    def _run_batch(self):
         self._index_expected()
 
         # folders such as .git or __MACOSX (from zip files) are not students
@@ -936,6 +958,17 @@ class BatchWorker(QThread):
                 # (e.g. two N_DIFF_PIXELS rules on different ROIs) do not overwrite each other.
                 rk = f"R{ri}_{metric}"
 
+                # student file: use specified output; if blank, repeat the previous
+                # image rule (looked up before the settings check, so a blank Output
+                # after a rule with invalid settings still repeats that rule's file)
+                if output.lower() != "cout":
+                    if output:
+                        stud_path, stud_status = self._find_student_file(base, output)
+                        last_out, last_stud = output, (stud_path, stud_status)
+                    else:
+                        output = last_out
+                        stud_path, stud_status = last_stud
+
                 try:
                     max_score, mode, aggregation = check_rule_settings(max_score, mode, aggregation)
                 except ValueError as e:
@@ -961,13 +994,6 @@ class BatchWorker(QThread):
                 mask_path_to_use = resolve_path(mask_spec, self.rules_base_dir) if mask_spec else ""
                 rowres[f"{rk}_mask"] = csv_path(mask_path_to_use) or (f"MISSING: {mask_spec}" if mask_spec else "")
 
-                # student file: use specified output; if blank, repeat the previous rule
-                if output:
-                    stud_path, stud_status = self._find_student_file(base, output)
-                    last_out, last_stud = output, (stud_path, stud_status)
-                else:
-                    output = last_out
-                    stud_path, stud_status = last_stud
                 rowres[f"{rk}_student_path"] = csv_path(stud_path) or stud_status
 
                 # expected image
@@ -1200,9 +1226,9 @@ class ImageGraderApp(QMainWindow):
                 if dlg.exec() == QDialog.Accepted:
                     mp = dlg.get_mask_path()
                     if mp:
-                        self.mask_path = mp
+                        old_mask, self.mask_path = self.mask_path, mp
                         self.mask_info.setText(f"Mask: {os.path.basename(mp)}")
-                        ensure_mask_in_notes(self.table, self.mask_path)
+                        ensure_mask_in_notes(self.table, self.mask_path, old_mask)
                         QMessageBox.information(self,"ROI","Rectangle ROI captured and applied.")
                         self._update_previews()
                         return
@@ -1214,9 +1240,9 @@ class ImageGraderApp(QMainWindow):
                 return
         p,_=QFileDialog.getOpenFileName(self,"Open mask image (binary)","",IMAGE_FILTER)
         if p:
-            self.mask_path=p
+            old_mask, self.mask_path = self.mask_path, p
             self.mask_info.setText(f"Mask: {os.path.basename(p)}")
-            ensure_mask_in_notes(self.table, self.mask_path)
+            ensure_mask_in_notes(self.table, self.mask_path, old_mask)
             QMessageBox.information(self,"Mask",f"Mask loaded: {p}")
             self._update_previews()
 
@@ -1240,8 +1266,9 @@ class ImageGraderApp(QMainWindow):
             self.table.setItem(row,2,QTableWidgetItem(str(r["max_score"]))); self.table.setItem(row,3,QTableWidgetItem(r["tolerances"]))
             self.table.setItem(row,4,QTableWidgetItem(r["mode"])); self.table.setItem(row,5,QTableWidgetItem(r["aggregation"]))
             notes = r["notes"]
-            if self.mask_path and f"mask={self.mask_path}" not in notes:
-                notes = (notes + "," if notes else "") + f"mask={self.mask_path}"
+            if (self.mask_path and r["output"].strip().lower() != "cout"
+                    and not extract_mask_from_notes(notes)):
+                notes = (notes + "," if notes else "") + f'mask="{self.mask_path}"'
             self.table.setItem(row,6,QTableWidgetItem(notes)); self.table.setItem(row,7,QTableWidgetItem("Not run"))
 
     def on_delete_rule(self):
@@ -1359,10 +1386,18 @@ class ImageGraderApp(QMainWindow):
         self.progress.setValue(percent); self.progress.setLabelText(f"Processing: {fname}"); QApplication.processEvents()
 
     def on_batch_finished(self, results, save_path):
+        # the worker sends its result as its last step; let it end, so that a
+        # batch started right after this one is not refused as still running
+        w = getattr(self, "worker", None)
+        if w is not None and w is not QThread.currentThread():
+            w.wait(5000)
         try: self.progress.setValue(100); self.progress.close()
         except: pass
         if results is None:
             QMessageBox.information(self,"Batch Cancelled","Batch evaluation was cancelled; no CSV was written.")
+            return
+        if isinstance(results, str):
+            QMessageBox.warning(self,"Batch Failed",f"Batch evaluation stopped with an error; no CSV was written.\n{results}")
             return
         if results:
             # Columns in rule order (R1..Rn) with a fixed order inside each rule,
@@ -1482,7 +1517,7 @@ class ImageGraderApp(QMainWindow):
             self.table.setItem(row,4,QTableWidgetItem('bucket')); self.table.setItem(row,5,QTableWidgetItem('mean'))
             notes = 'from scan'
             if self.mask_path:
-                notes += f",mask={self.mask_path}"
+                notes += f',mask="{self.mask_path}"'
             self.table.setItem(row,6,QTableWidgetItem(notes)); self.table.setItem(row,7,QTableWidgetItem('')); row+=1
         if console:
             self.table.insertRow(row)
@@ -1491,8 +1526,6 @@ class ImageGraderApp(QMainWindow):
             )
             self.table.setItem(row,4,QTableWidgetItem('bucket')); self.table.setItem(row,5,QTableWidgetItem(''))
             notes = 'file=stdout.txt'
-            if self.mask_path:
-                notes += f",mask={self.mask_path}"
             self.table.setItem(row,6,QTableWidgetItem(notes)); self.table.setItem(row,7,QTableWidgetItem(''))
 
 if __name__ == "__main__":
